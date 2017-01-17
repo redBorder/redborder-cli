@@ -4,7 +4,7 @@ require 'cmdparse'
 
 $parser = CmdParse::CommandParser.new(handle_exceptions: :no_help)
 
-Dir["/usr/local/lib/red/*.rb"].each { |file| require file }
+Dir["#{ENV['RBLIB']}/red/*.rb"].each { |file| require file }
 
 $parseb.global_options do |opt|
 	opt.on("-v","--verbose","Enable verbosity") do
