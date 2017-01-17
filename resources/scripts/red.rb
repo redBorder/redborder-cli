@@ -2,27 +2,17 @@
 
 require 'cmdparse'
 
-class TestCmd < CmdParse::Command
-  def initialize
-    super('test')
-    short_desc('Short description of command')
-    add_command(TestSubCmd.new)
-  end
+$parser = CmdParse::CommandParser.new(handle_exceptions: :no_help)
+
+Dir["/usr/local/lib/red/*.rb"].each { |file| require file }
+
+$parseb.global_options do |opt|
+	opt.on("-v","--verbose","Enable verbosity") do
+		$parser.data[:verbose] = true
+	end
 end
 
-class TestSubCmd < CmdParse::Command
-  def initialize
-    super('sub', takes_commands: false)
-    options.on('-x', '--example', 'Example option') { puts 'example' }
-  end
+$parser.add_command(CmdParse::HelpCommand.new)
 
-  def execute(name, *opt)
-    puts "Hello #{name}, options: #{opt.join(', ')}"
-  end
-end
-
-parser = CmdParse::CommandParser.new(handle_exceptions: :no_help)
-parser.add_command(CmdParse::HelpCommand.new)
-parser.add_command(TestCmd.new)
-parser.parse
+$parser.parse
 
