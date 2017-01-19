@@ -8,7 +8,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash redborder-common redborder-rubyrvm
+Requires: bash redborder-common redborder-rubyrvm bash-completion bash-completion-extras
 
 %description
 %{summary}
@@ -21,10 +21,13 @@ Requires: bash redborder-common redborder-rubyrvm
 %install
 mkdir -p %{buildroot}/usr/lib/redborder/scripts
 mkdir -p %{buildroot}/usr/lib/redborder/lib/red
+mkdir -p %{buildroot}/etc/bash_completion.d
 cp resources/lib/* %{buildroot}/usr/lib/redborder/lib/red
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
+cp resources/red_bash_completion %{buildroot}/etc/bash_completion.d
 chmod 0644 %{buildroot}/usr/lib/redborder/lib/red/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
+chmof 0644 %{buildroot}/etc/bash_completion.d/*
 
 %pre
 
@@ -36,6 +39,7 @@ chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
 /usr/lib/redborder/scripts
 %defattr(0644,root,root)
 /usr/lib/redborder/lib/red/*
+/etc/bash_completion.d/*
 
 %doc
 
