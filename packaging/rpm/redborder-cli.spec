@@ -24,10 +24,10 @@ mkdir -p %{buildroot}/usr/lib/redborder/lib/red
 mkdir -p %{buildroot}/etc/bash_completion.d
 cp resources/lib/* %{buildroot}/usr/lib/redborder/lib/red
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
-cp resources/red_bash_completion %{buildroot}/etc/bash_completion.d
+cp resources/red_bash_completion %{buildroot}/etc/bash_completion.d/red
 chmod 0644 %{buildroot}/usr/lib/redborder/lib/red/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
-chmof 0644 %{buildroot}/etc/bash_completion.d/*
+chmod 0644 %{buildroot}/etc/bash_completion.d/*
 
 %pre
 
