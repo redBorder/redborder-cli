@@ -1,0 +1,40 @@
+#  Completion for red:
+#
+#
+_red()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    # Available options
+    opts="help node service"
+
+    # sub-command options
+    node_opts="list"
+    service_opts="list"
+
+    if [ "$COMP_CWORD" -eq 1 ]; then #first command
+      COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    else # sub-command
+      case "${prev}" in
+          help)
+              COMPREPLY=( $(compgen -W ${opts} ${cur}) )
+              return 0
+              ;;
+          node)
+              COMPREPLY=( $(compgen -W "${node_opts}" -- ${cur}) )
+              return 0
+              ;;
+          service)
+              COMPREPLY=( $(compgen -W "${service_opts}" -- ${cur}) )
+              return 0
+              ;;
+          *)
+          ;;
+      esac
+    fi
+
+}
+complete -F _red red

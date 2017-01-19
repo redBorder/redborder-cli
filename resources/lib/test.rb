@@ -17,5 +17,5 @@ class TestSubCmd < CmdParse::Command
   end
 end
 
-$parser.add_command(TestCmd.new)
+#$parser.add_command(TestCmd.new)
 
