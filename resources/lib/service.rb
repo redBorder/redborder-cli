@@ -27,12 +27,15 @@ class ServiceListCmd < CmdParse::Command
 
     node = Chef::Node.load(Socket.gethostname.split(".").first)
     services = node.attributes.redborder.services
+    systemd_services = node.attributes.redborder.systemdservice
     services.each do |service,enabled|
       if $parser.data[:all_services] == false and enabled == false
         next
       else
-        ret = system("systemctl status #{service} &>/dev/null") ? "OK" : "Fail"
-        puts "Status of service #{service}: #{ret}"
+        systemd_services[service].each do |systemd_service|
+          ret = system("systemctl status #{systemd_service} &>/dev/null") ? "OK" : "Fail"
+          puts "Status of service #{systemd_service}: #{ret}"
+        end
       end
     end
 
