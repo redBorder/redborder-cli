@@ -67,7 +67,7 @@ class ServiceEnableCmd < CmdParse::Command
     
     services_with_same_group.each do |s|
        role.override_attributes["redborder"]["services"][s] = true
-       puts "Service #{s} enable."
+       puts "#{s} enabled."
     end
     role.save
 
@@ -99,7 +99,7 @@ class ServiceDisableCmd < CmdParse::Command
 
     services_with_same_group.each do |s|
        role.override_attributes["redborder"]["services"][s] = false
-       puts "Service #{s} disable."
+       puts "#{s} disabled."
     end
     role.save
 
