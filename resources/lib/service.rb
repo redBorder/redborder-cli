@@ -27,7 +27,7 @@ class ServiceListCmd < CmdParse::Command
 
     node = Chef::Node.load(Socket.gethostname.split(".").first)
     services = node.attributes.redborder.services
-    systemd_services = node.attributes.redborder.systemdservice
+    systemd_services = node.attributes.redborder.systemdservices
     services.each do |service,enabled|
       if $parser.data[:all_services] == false and enabled == false
         next
