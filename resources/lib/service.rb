@@ -57,17 +57,20 @@ class ServiceEnableCmd < CmdParse::Command
 
     node = Chef::Node.load(Socket.gethostname.split(".").first)
     services = node.attributes.redborder.services
-    if services.include? service
-      role = Chef::Role.load(Socket.gethostname.split(".").first)
-      if !role.override_attributes["redborder"]["services"][service] or (role.override_attributes["redborder"]["services"][service] and role.override_attributes["redborder"]["services"][service] == false)
-        role.override_attributes["redborder"]["services"][service] = true
-        role.save
-      else
-        puts "The service #{service} was already enabled."
-      end
-     else
-       puts "The service #{service} doesn't exists."
-     end
+    systemd_services = node.attributes.redborder.systemdservices
+    
+    group_of_the_service = systemd_services[service]
+    services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys
+
+    role = Chef::Role.load(Socket.gethostname.split(".").first)
+    role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+    
+    services_with_same_group.each do |s|
+       role.override_attributes["redborder"]["services"][s] = true
+       puts "Service #{s} enable."
+    end
+    role.save
+
   end
 end
 
@@ -86,17 +89,19 @@ class ServiceDisableCmd < CmdParse::Command
 
     node = Chef::Node.load(Socket.gethostname.split(".").first)
     services = node.attributes.redborder.services
-      if services.include? service
-      role = Chef::Role.load(Socket.gethostname.split(".").first)
-      if role.override_attributes["redborder"]["services"][service]
-        role.override_attributes["redborder"]["services"].delete(service)
-        role.save
-      else
-        puts "The service #{service} was already disabled."
-      end
-     else
-       puts "The service #{service} doesn't exists."
-     end
+    systemd_services = node.attributes.redborder.systemdservices
+
+    group_of_the_service = systemd_services[service]
+    services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys
+
+    role = Chef::Role.load(Socket.gethostname.split(".").first)
+    role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+
+    services_with_same_group.each do |s|
+       role.override_attributes["redborder"]["services"][s] = false
+       puts "Service #{s} disable."
+    end
+    role.save
 
   end
 end
