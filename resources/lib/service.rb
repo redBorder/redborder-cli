@@ -70,8 +70,6 @@ class ServiceEnableCmd < CmdParse::Command
     role = Chef::Role.load(Socket.gethostname.split(".").first)
     role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
    
-    services_with_same_group = [service] if services_with_same_group.empty? and services.include? service # in case is the service is not definde in systemdservices
-
     services_with_same_group.each do |s|
        role.override_attributes["redborder"]["services"][s] = true
        puts "#{s} enabled."
@@ -103,8 +101,6 @@ class ServiceDisableCmd < CmdParse::Command
 
     role = Chef::Role.load(Socket.gethostname.split(".").first)
     role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
-
-    services_with_same_group = [service] if services_with_same_group.empty? and services.include? service # in case is the service is not definde in systemdservices
 
     services_with_same_group.each do |s|
        role.override_attributes["redborder"]["services"][s] = false
