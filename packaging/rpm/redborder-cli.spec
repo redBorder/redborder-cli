@@ -44,6 +44,8 @@ chmod 0644 %{buildroot}/etc/bash_completion.d/*
 %doc
 
 %changelog
+* Tue Jan 21 2022 David Vanhoucke <dvanhoucke@redborder.com> - 0.0.8-1
+- adding extra functionality
 * Tue Jan 17 2017 Juan J. Prieto <jjprieto@redborder.com> - 0.0.1-1
 - first spec version
 
