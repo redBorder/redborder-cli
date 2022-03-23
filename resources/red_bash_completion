@@ -14,6 +14,7 @@ _red()
     # sub-command options
     node_opts="list"
     service_opts="list"
+    logstash_opts="list"
 
     if [ "$COMP_CWORD" -eq 1 ]; then #first command
       COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
@@ -29,6 +30,10 @@ _red()
               ;;
           service)
               COMPREPLY=( $(compgen -W "${service_opts}" -- ${cur}) )
+              return 0
+              ;;
+          logstash)
+              COMPREPLY=( $(compgen -W "${logstash_opts}" -- ${cur}) )
               return 0
               ;;
           *)

@@ -47,5 +47,32 @@ class Utils
     end
     return nodes
   end
+
+
+  # Logstash Utils
+  def get_logstash_pipelines
+    logstash_api_query('_node/stats/pipelines')
+  end
+
+  def get_logstash_pipeline(pipeline)
+    logstash_api_query('_node/stats/pipelines/' + pipeline)
+  end
+
+
+  def get_logstash_status()
+    logstash_api_query('_node/stats/process')
+  end
+
+  #  curl -XGET 'localhost:9600/_node/stats/pipelines/vault-pipeline'
+
+  def logstash_api_query(action)
+   uri = URI.parse("http://localhost:9600/#{action}")
+   response = Net::HTTP.get_response(uri)
+   if response.code == "200"
+     JSON.parse(response.body) rescue {}
+   else
+     {}
+   end
+  end
 end
 
