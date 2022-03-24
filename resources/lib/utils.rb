@@ -59,16 +59,20 @@ class Utils
   end
 
 
-  def get_logstash_status()
+  def get_logstash_status
     logstash_api_query('_node/stats/process')
+  end
+
+  def get_logstash_plugins
+    logstash_api_query('_node/plugins')
   end
 
   #  curl -XGET 'localhost:9600/_node/stats/pipelines/vault-pipeline'
 
   def logstash_api_query(action)
    uri = URI.parse("http://localhost:9600/#{action}")
-   response = Net::HTTP.get_response(uri)
-   if response.code == "200"
+   response = Net::HTTP.get_response(uri) rescue {}
+   if !response.body.empty? and response.code == "200"
      JSON.parse(response.body) rescue {}
    else
      {}
