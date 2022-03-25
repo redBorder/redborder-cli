@@ -72,8 +72,12 @@ class Utils
   def logstash_api_query(action)
    uri = URI.parse("http://localhost:9600/#{action}")
    response = Net::HTTP.get_response(uri) rescue {}
-   if !response.body.empty? and response.code == "200"
-     JSON.parse(response.body) rescue {}
+   unless response.class == Hash
+     if !response.body.empty? and response.code == "200"
+       JSON.parse(response.body) rescue {}
+     else
+       {}
+     end
    else
      {}
    end
