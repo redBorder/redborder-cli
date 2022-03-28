@@ -32,8 +32,10 @@ class ServiceListCmd < CmdParse::Command
       if $parser.data[:all_services] == false and enabled == false
         next
       else
-        systemd_services[service].each do |systemd_service|
-          systemctl_services.push(systemd_service)
+        if systemd_services and systemd_services[service] 
+          systemd_services[service].each do |systemd_service|
+            systemctl_services.push(systemd_service)
+          end
         end
       end
     end
