@@ -3,6 +3,7 @@ require 'net/http'
 require 'uri'
 require 'json'
 require 'chef'
+require 'pathname'
 
 class Utils
    include Singleton
@@ -15,8 +16,9 @@ class Utils
     ret = system("ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /var/www/rb-rails/config/rsa root@#{node} " + cmd.join(' '))
   end
 
-  def remote_copy(node, file, path)
-    ret = system("scp -r -i /var/www/rb-rails/config/rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no #{file} root@#{node}:#{path}")
+  def remote_copy(node, path)
+    target = Pathname.new(path).parent.to_s
+    ret = system("scp -r -i /var/www/rb-rails/config/rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no #{path} root@#{node}:#{target}")
   end
 
   def get_consul_members

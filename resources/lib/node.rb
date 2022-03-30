@@ -80,7 +80,7 @@ class NodeCopyCmd < CmdParse::Command
     short_desc('Copy files to nodes')
   end
 
-  def execute(node, source_path, target_path)
+  def execute(node, path)
     utils = Utils.instance
     nodes = []
 
@@ -91,10 +91,10 @@ class NodeCopyCmd < CmdParse::Command
     end
 
     nodes.each do |n|
-      puts "##############################################"
-      puts "# #{source_path}   >   Node: #{n}:#{target_path}"
-      puts "##############################################"
-      utils.remote_copy(n, source_path, target_path)
+      puts "###############################################"
+      puts "# #{path}   >   Node: #{n}:#{path}"
+      puts "###############################################"
+      utils.remote_copy(n, path)
     end
   end
 
