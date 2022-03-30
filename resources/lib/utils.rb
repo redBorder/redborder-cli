@@ -15,6 +15,10 @@ class Utils
     ret = system("ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /var/www/rb-rails/config/rsa root@#{node} " + cmd.join(' '))
   end
 
+  def remote_copy(node, file, path)
+    ret = system("scp -r -i /var/www/rb-rails/config/rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no #{file} root@#{node}:#{path}")
+  end
+
   def get_consul_members
     nodes = []
     uri = URI.parse("http://localhost:8500/v1/agent/members")
