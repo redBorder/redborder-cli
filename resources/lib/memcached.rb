@@ -185,7 +185,7 @@ class MemcachedGetKeysCmd < CmdParse::Command
           printf("%5s %25s %13s %45s", row[0] + " |", row[1].to_s + " | ", row[2] + " | ", row[3])
           printf("\n")
           separator if row!=rows.last
-          
+
         end
 
         bottom
@@ -202,31 +202,16 @@ end
 
 class MemcachedGetValueCmd < CmdParse::Command
   def initialize
-    super('value', takes_commands: false)
-    short_desc('Shows stored memcached values for given keys')
-    argument_desc(key: "Required argument. Used to find a memcached entry. Can be given with \"*\" in order look for a pattern instead. \n", keys: 'Optional argument to add more keys. Can be used "*" too.')
+    super('values', takes_commands: false)
+    short_desc('Shows stored memcached values.')
+    long_desc('Patterns can be provided to filter memcached keys.')
+    options.on('-v', '--invert-match') { $parser.data[:invert]   = "-v" }
+
   end
 
-  def execute(key, *keys)
+  def execute(keys)
 
-    if key.include? "*"
-      key = key.split("*")[0]
-      list_of_keys = `red memcached keys | grep -F '#{key}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
-    else
-      list_of_keys = Array.new
-      list_of_keys << key
-    end
-
-    if !keys.empty?
-      keys.each do |k|
-        if k.include? "*"
-          k = k.split("*")[0]
-          list_of_keys = list_of_keys.push(*`red memcached keys | grep -F '#{k}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split)
-        else
-          list_of_keys += keys
-        end
-      end
-    end
+    list_of_keys = `red memcached keys '#{$parser.data[:invert]}' '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
 
     @memcached = Dalli::Client.new("memcached.service:11211", {:expires_in => 0})
 
@@ -235,20 +220,19 @@ class MemcachedGetValueCmd < CmdParse::Command
       printf("%15s %75s", "Key", "Value")
       printf("\n")
       separator
-    end
 
-    list_of_keys.each do |k|
-      value = @memcached.get("#{k}")
-      printf("%-43s %50s", "#{k}", value.nil? ? "nil" : value.to_s)
-      printf("\n")
-      separator if k!=list_of_keys.last
-    end
-    if list_of_keys.length > 0
+      list_of_keys.each do |k|
+        value = @memcached.get("#{k}")
+        printf("%-43s %50s", "#{k}", value.to_s)
+        printf("\n")
+        separator if k!=list_of_keys.last
+      end
       bottom
     else
       puts "There is no entry in memcached for provided keys"
     end
   end
 end
+
 $parser.add_command(MemcachedCmd.new)
 
