@@ -111,8 +111,8 @@ class MemcachedGetKeysCmd < CmdParse::Command
   def initialize
     super('keys', takes_commands: false)
     short_desc('Shows memcached keys')
-    options.on('-f', '--filter') { $parser.data[:display]   = true }
-    long_desc('Flag -f filters memcached keys.')
+    long_desc('Patterns can be provided to filter memcached keys.')
+    options.on('-v', '--invert-match') { $parser.data[:invert]   = true }
   end
 
   def execute(pattern)
@@ -157,12 +157,35 @@ class MemcachedGetKeysCmd < CmdParse::Command
         end
 
         rows.each do |row|
-          if !pattern.nil?
-            next if !row[3].include? pattern #Exclude rows which are different from the pattern
+
+          # invert-match option? #
+          if $parser.data[:invert]
+            next_row = false
+          else
+            next_row = true
           end
+          #----------------------#
+
+          # Is there any pattern? #
+          if !pattern.empty?
+            pattern.each do |p|
+              if $parser.data[:invert]
+                next_row = true if row[3].include? p
+              else
+                if row[3].include? p
+                  next_row = false
+                  break
+                end
+              end
+            end
+          end
+
+          next if (next_row and !pattern.empty?) # Skip printing this key
+
           printf("%5s %25s %13s %45s", row[0] + " |", row[1].to_s + " | ", row[2] + " | ", row[3])
           printf("\n")
           separator if row!=rows.last
+          
         end
 
         bottom
