@@ -115,7 +115,7 @@ class MemcachedGetKeysCmd < CmdParse::Command
     options.on('-v', '--invert-match') { $parser.data[:invert]   = true }
   end
 
-  def execute(pattern)
+  def execute(*pattern)
     # Credit to Graham King at http://www.darkcoding.net/software/memcached-list-all-keys/ for the original article on how to get the data from memcache in the first place.
     # Adapted by Pablo Nebrera (pablonebrera@eneotecnologia.com) --> rb_memcache_keys
     # Adapted by Eduardo Reyes (eareyes@redborder.com) --> red command
@@ -205,13 +205,19 @@ class MemcachedGetValueCmd < CmdParse::Command
     super('values', takes_commands: false)
     short_desc('Shows stored memcached values.')
     long_desc('Patterns can be provided to filter memcached keys.')
-    options.on('-v', '--invert-match') { $parser.data[:invert]   = "-v" }
+    options.on('-v', '--invert-match') { $parser.data[:invert]   = true }
 
   end
 
-  def execute(keys)
+  def execute(*keys)
 
-    list_of_keys = `red memcached keys '#{$parser.data[:invert]}' '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
+    keys = "#{keys.join("' '")}"
+
+    if $parser.data[:invert]
+      list_of_keys = `red memcached keys -v '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
+    else
+      list_of_keys = `red memcached keys '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
+    end
 
     @memcached = Dalli::Client.new("memcached.service:11211", {:expires_in => 0})
 
