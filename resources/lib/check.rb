@@ -1,6 +1,5 @@
 require "getopt/std"
-require 'chef'
-require_relative "/usr/lib/redborder/lib/check_functions.rb"
+require_relative "/usr/lib/redborder/lib/check/check_functions.rb"
 
 USAGE = <<ENDUSAGE
 
@@ -75,16 +74,45 @@ class CheckStatusCmd < CmdParse::Command
 
     commons = %w[hd install io killed licenses memory]
     check_dir = "/usr/lib/redborder/lib/check"
+    scripts_path = []
     title_ok("DATE:  " + time,colorless,quiet)
 
     if service.nil?
+
+      #Collecting all scripts in "/usr/lib/redborder/lib/check/commons"
+      commons.each do |script|
+        scripts_path.push(File.join(check_dir,"commons","rb_check_" + script + ".rb"))
+      end
+
+      #Collecting all scripts in /usr/lib/redborder/lib/check
+      # They must have the following directory structure:
+      #   /usr/lib/redborder/lib/check/<script>
+      #   ├── rb_check_<script>_functions.rb
+      #   └── rb_check_<script>.rb
       directories = Dir.entries(check_dir).select{
         |entry| File.directory? File.join(check_dir,entry) and
-          !(entry =='.' || entry == '..' || entry == 'commons') }
-      puts directories
+          !(entry == '.' || entry == '..' || entry == 'commons') }
+      directories.each do | dir |
+        scripts = Dir.entries(File.join(check_dir,dir)).select{|entry|
+          !(entry == '.' || entry == '..' || entry.include?('functions')) }
+        scripts.each do |s|
+          scripts_path.push(File.join(check_dir,dir,s))
+        end
+      end
     else
+      if commons.include? service
+        scripts_path.push(File.join(check_dir,"commons","rb_check_" + service + ".rb"))
 
+      elsif File.directory? File.join(check_dir,service)
+        scripts_path.push(File.join(check_dir,service,"rb_check_" + service + ".rb"))
+      else
+        title_error(service,colorless,quiet)
+        logit("Service #{service} have not got scripts to check")
+        exit 1
+      end
     end
+    scripts_path.each do | script |
+      `#{script}`
   end
 end
 $parser.add_command(CheckCmd.new)
