@@ -105,14 +105,16 @@ class CheckStatusCmd < CmdParse::Command
 
       elsif File.directory? File.join(check_dir,service)
         scripts_path.push(File.join(check_dir,service,"rb_check_" + service + ".rb"))
+
       else
         title_error(service,colorless,quiet)
-        logit("Service #{service} have not got scripts to check")
+        logit("Service #{service} has not got scripts to check")
         exit 1
       end
     end
     scripts_path.each do | script |
-      `#{script}`
+      puts `#{script}`
+    end
   end
 end
 $parser.add_command(CheckCmd.new)
