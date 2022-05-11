@@ -25,8 +25,9 @@ UNFLAGGED_ARGS = [ :directory ]     # Bare arguments (no flag)
 class CheckCmd < CmdParse::Command
   def initialize
     super('check')
-    short_desc('Check all cluster nodes status')
+    short_desc('Check status of all nodes\'s services in the cluster')
     add_command(CheckStatusCmd.new, default: true)
+    add_command(CheckListCmd.new)
     add_command(CheckHelpCmd.new)
   end
 end
@@ -36,9 +37,35 @@ class CheckHelpCmd < CmdParse::Command
     super('help', takes_commands: false)
   end
 
-  def execute( )
+  def execute
     puts USAGE
     puts HELP
+  end
+end
+
+class CheckListCmd < CmdParse::Command
+  def initialize
+    super('list', takes_commands: false)
+  end
+
+  def execute
+    list = []
+    commons = %w[hd install io killed licenses memory]
+
+    commons.each { | s |  list.push(s)}
+
+    check_dir = "/usr/lib/redborder/lib/check"
+
+    directories = Dir.entries(check_dir).select{
+      |entry| File.directory? File.join(check_dir,entry) and
+        !(entry == '.' || entry == '..' || entry == 'commons')}
+
+    directories.each { | s |  list.push(s)}
+
+    logit "Checks available:"
+    logit ""
+
+    list.each { |check| logit("  -" + check) }
   end
 end
 
