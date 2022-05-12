@@ -62,8 +62,7 @@ class CheckListCmd < CmdParse::Command
 
     directories.each { | s |  list.push(s)}
 
-    logit "Checks available:"
-    logit ""
+    logit "Checks available:\n"
 
     list.each { |check| logit("  -" + check) }
   end
