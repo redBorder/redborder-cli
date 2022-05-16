@@ -154,10 +154,10 @@ class CheckStatusCmd < CmdParse::Command
       directories = Dir.entries(check_dir).select{
         |entry| File.directory? File.join(check_dir,entry) and
           !(entry == '.' || entry == '..' || entry == 'commons') }
-      directories.each do | dir |
+      directories.sort.each do | dir |
         scripts = Dir.entries(File.join(check_dir,dir)).select{|entry|
           !(entry == '.' || entry == '..' || entry.include?('functions')) }
-        scripts.sort.each do |s|
+        scripts.each do |s|
           scripts_path.push(File.join(check_dir,dir,s))
         end
       end
