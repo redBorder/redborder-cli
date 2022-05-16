@@ -21,7 +21,7 @@ ENDHELP
 ARGS = { :colorless => false, :extended=> false, :quiet=> false, :service => nil}   # Setting default values
 UNFLAGGED_ARGS = [ :directory ]     # Bare arguments (no flag)
 
-def print_date_on_file(output_file)
+def print_date_on_file(output_file,colorless)
   file = File.open(output_file, "w")
   columns =  get_stty_columns
   if colorless
@@ -136,7 +136,7 @@ class CheckStatusCmd < CmdParse::Command
 
     title_ok("DATE:  " + time,colorless,quiet)
 
-    print_date_on_file(output_file) if output_file != "/dev/null"
+    print_date_on_file(output_file,colorless) if output_file != "/dev/null"
 
     if service.nil?
 
