@@ -24,6 +24,7 @@ UNFLAGGED_ARGS = [ :directory ]     # Bare arguments (no flag)
 def print_date_on_file(output_file,colorless)
   file = File.open(output_file, "w")
   columns =  get_stty_columns
+  time = Time.utc(*Time.new.to_a).to_s
   if colorless
     file.puts("#" * columns)
     file.puts("DATE:  " + time)
