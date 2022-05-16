@@ -21,6 +21,20 @@ ENDHELP
 ARGS = { :colorless => false, :extended=> false, :quiet=> false, :service => nil}   # Setting default values
 UNFLAGGED_ARGS = [ :directory ]     # Bare arguments (no flag)
 
+def print_date_on_file(output_file)
+  file = File.open(output_file, "w")
+  columns =  get_stty_columns
+  if colorless
+    file.puts("#" * columns)
+    file.puts("DATE:  " + time)
+    file.puts("#" * columns)
+  else
+    file.puts("\e[36m" +  "#" * columns)
+    file.puts("\e[34m" + "DATE:  " + time + "\e[36m")
+    file.puts("#" * columns)
+  end
+  file.close
+end
 
 class CheckCmd < CmdParse::Command
   def initialize
@@ -109,6 +123,7 @@ class CheckStatusCmd < CmdParse::Command
     colorless = ARGS[:colorless]
     script_commands += " -c" if colorless
     extended = ARGS[:extended]
+    script_commands += " -e" if extended
     quiet = ARGS[:quiet]
     script_commands += " -q" if quiet
 
@@ -120,9 +135,8 @@ class CheckStatusCmd < CmdParse::Command
     scripts_path = []
 
     title_ok("DATE:  " + time,colorless,quiet)
-    if output_file != "/dev/null"
-      File.open(output_file, "w") { |f| f.write title_ok("DATE:  " + time,colorless,quiet) }
-    end
+
+    print_date_on_file(output_file) if output_file != "/dev/null"
 
     if service.nil?
 
