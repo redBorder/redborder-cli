@@ -27,7 +27,7 @@ def print_date_on_file(output_file,colorless)
   time = Time.utc(*Time.new.to_a).to_s
   if colorless
     file.puts("#" * columns)
-    file.puts("DATE:  " + time)
+    file.puts(" DATE:  " + time)
     file.puts("#" * columns)
   else
     file.puts("\e[36m" +  "#" * columns)
@@ -175,7 +175,7 @@ class CheckStatusCmd < CmdParse::Command
     end
 
     scripts_path.each do | script |
-      result = `#{script} #{script_commands} | tee #{output_file}`
+      result = `#{script} #{script_commands} | tee -a #{output_file}`
       return_value = $?.exitstatus
       has_errors = true if return_value != 0
       puts result
