@@ -9,7 +9,7 @@ ENDUSAGE
 
 HELP = <<ENDHELP
    service <service_name>      Show only information about this service name.
-   output_file <output_file>   Stdout to this file instead of stdout.
+   output_file <output_file>   Stdout to this file.
    upload <s3path>             Upload output to this s3 path.
    keep <X>                    Keep last X files into s3.
    colorless                   Do not use colors.
@@ -93,15 +93,36 @@ class CheckStatusCmd < CmdParse::Command
       end
     end
 
-    colorless = ARGS[:colorless]
-    quiet = ARGS[:quiet]
+    script_commands = ""
+
+    #ARGS
     service = ARGS[:service]
+    if ARGS[:output_file]
+      output_file = ARGS[:output_file]
+      File.delete(output_file) if File.exist?(output_file)
+      File.new(output_file, "w").close()
+    else
+      output_file = "/dev/null"
+    end
+    upload = ARGS[:upload]
+    keep = ARGS[:keep]
+    colorless = ARGS[:colorless]
+    script_commands += " -c" if colorless
+    extended = ARGS[:extended]
+    quiet = ARGS[:quiet]
+    script_commands += " -q" if quiet
+
     time = Time.utc(*Time.new.to_a).to_s
+    has_errors = false
 
     commons = %w[hd install io killed licenses memory]
     check_dir = "/usr/lib/redborder/lib/check"
     scripts_path = []
+
     title_ok("DATE:  " + time,colorless,quiet)
+    if output_file != "/dev/null"
+      File.open(output_file, "w") { |f| f.write title_ok("DATE:  " + time,colorless,quiet) }
+    end
 
     if service.nil?
 
@@ -121,7 +142,7 @@ class CheckStatusCmd < CmdParse::Command
       directories.each do | dir |
         scripts = Dir.entries(File.join(check_dir,dir)).select{|entry|
           !(entry == '.' || entry == '..' || entry.include?('functions')) }
-        scripts.each do |s|
+        scripts.sort.each do |s|
           scripts_path.push(File.join(check_dir,dir,s))
         end
       end
@@ -133,14 +154,18 @@ class CheckStatusCmd < CmdParse::Command
         scripts_path.push(File.join(check_dir,service,"rb_check_" + service + ".rb"))
 
       else
-        title_error(service,colorless,quiet)
         logit("Service #{service} has not got scripts to check")
         exit 1
       end
     end
+
     scripts_path.each do | script |
-      puts `#{script}`
+      result = `#{script} #{script_commands} | tee #{output_file}`
+      return_value = $?.exitstatus
+      has_errors = true if return_value != 0
+      puts result
     end
+    exit 1 if has_errors
   end
 end
 $parser.add_command(CheckCmd.new)
