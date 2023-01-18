@@ -4,6 +4,7 @@ class NodeCmd < CmdParse::Command
     short_desc('Manage node actions and values')
     add_command(NodeListCmd.new, default: true)
     add_command(NodeExecuteCmd.new, default: false)
+    add_command(NodeCopyCmd.new, default: false)
   end
 end
 
@@ -67,6 +68,33 @@ class NodeExecuteCmd < CmdParse::Command
       puts "# Node: #{n}"
       puts "##############################################"
       utils.remote_cmd(n, cmd)
+    end
+  end
+
+end
+
+class NodeCopyCmd < CmdParse::Command
+
+  def initialize
+    super('copy', takes_commands: false)
+    short_desc('Copy files to nodes')
+  end
+
+  def execute(node, path)
+    utils = Utils.instance
+    nodes = []
+
+    nodes = utils.check_nodes(node)
+    if (nodes.count == 0)
+      cmd.insert(0, node)
+      nodes << Socket.gethostname.split(".").first
+    end
+
+    nodes.each do |n|
+      puts "###############################################"
+      puts "# #{path}   >   Node: #{n}:#{path}"
+      puts "###############################################"
+      utils.remote_copy(n, path)
     end
   end
 
