@@ -1,5 +1,5 @@
 require "getopt/std"
-require_relative "/usr/lib/redborder/lib/check/check_functions.rb"
+require_relative "/usr/lib/redborder/lib/check/check_functions.rb" unless `rpm -qa | grep redborder-manager`.empty? #link reference only for the manager. Doing this check with chef could be faster
 
 USAGE = <<ENDUSAGE
 
