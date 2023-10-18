@@ -51,7 +51,7 @@ class MemcachedStatusCmd < CmdParse::Command
 
     nodes.each do |node|
       node_info = utils.get_node(node)
-      services = node_info.attributes.redborder.services
+      services = node_info.attributes['redborder']['services']
       hosts << node if services["memcached"]
     end
 
