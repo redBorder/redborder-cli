@@ -25,7 +25,7 @@ class ServiceListCmd < CmdParse::Command
     utils = Utils.instance
     node = utils.get_node(Socket.gethostname.split(".").first)
     
-    services = node.attributes['redborder']['services']
+    services = node.attributes['redborder']['services'] ||  []
     systemd_services = node.attributes['redborder']['systemdservices']
     systemctl_services = []
     services.each do |service,enabled|
@@ -67,7 +67,7 @@ class ServiceEnableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      services = node.attributes['redborder']['services']
+      services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
     
       group_of_the_service = systemd_services[service]
@@ -109,7 +109,7 @@ class ServiceDisableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      services = node.attributes['redborder']['services']
+      services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
 
       group_of_the_service = systemd_services[service]
