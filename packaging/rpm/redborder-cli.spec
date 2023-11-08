@@ -1,3 +1,5 @@
+%undefine __brp_mangle_shebangs
+
 Name: redborder-cli
 Version: %{__version}
 Release: %{__release}%{?dist}
@@ -8,7 +10,7 @@ License: AGPL 3.0
 URL: https://github.com/redBorder/redborder-manager
 Source0: %{name}-%{version}.tar.gz
 
-Requires: bash redborder-common redborder-rubyrvm bash-completion bash-completion-extras
+Requires: bash redborder-common redborder-rubyrvm bash-completion
 
 %description
 %{summary}

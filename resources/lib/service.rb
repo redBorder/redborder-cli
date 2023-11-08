@@ -25,8 +25,8 @@ class ServiceListCmd < CmdParse::Command
     utils = Utils.instance
     node = utils.get_node(Socket.gethostname.split(".").first)
     
-    services = node.attributes.redborder.services
-    systemd_services = node.attributes.redborder.systemdservices
+    services = node.attributes['redborder']['services'] ||  []
+    systemd_services = node.attributes['redborder']['systemdservices']
     systemctl_services = []
     services.each do |service,enabled|
       if $parser.data[:all_services] == false and enabled == false
@@ -67,8 +67,8 @@ class ServiceEnableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      services = node.attributes.redborder.services
-      systemd_services = node.attributes.redborder.systemdservices
+      services = node.attributes['redborder']['services'] || []
+      systemd_services = node.attributes['redborder']['systemdservices']
     
       group_of_the_service = systemd_services[service]
       services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
@@ -109,8 +109,8 @@ class ServiceDisableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      services = node.attributes.redborder.services
-      systemd_services = node.attributes.redborder.systemdservices
+      services = node.attributes['redborder']['services'] || []
+      systemd_services = node.attributes['redborder']['systemdservices']
 
       group_of_the_service = systemd_services[service]
       services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
@@ -151,7 +151,7 @@ class ServiceStartCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      list_of_services = node.attributes.redborder.services
+      list_of_services = node.attributes['redborder']['services']
 
       services.each do |service|
         if list_of_services[service]
@@ -182,7 +182,7 @@ class ServiceStopCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-      list_of_services = node.attributes.redborder.services
+      list_of_services = node.attributes['redborder']['services']
 
       services.each do |service|
         if list_of_services[service]
