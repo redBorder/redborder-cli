@@ -24,7 +24,12 @@ class ServiceListCmd < CmdParse::Command
   def execute()
     utils = Utils.instance
     node = utils.get_node(Socket.gethostname.split(".").first)
-    
+
+    unless node
+      puts 'ERROR: Node not found!'
+      return
+    end
+
     services = node.attributes['redborder']['services'] ||  []
     systemd_services = node.attributes['redborder']['systemdservices']
     systemctl_services = []
@@ -44,7 +49,6 @@ class ServiceListCmd < CmdParse::Command
           ret = system("systemctl status #{systemd_service} &>/dev/null") ? "OK" : "Fail"
           puts "Status of service #{systemd_service}: #{ret}"
     end
-
   end
 end
 
@@ -67,6 +71,12 @@ class ServiceEnableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
+
+      unless node
+        puts "ERROR: Node not found!"
+        next
+      end
+
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
     
@@ -109,6 +119,12 @@ class ServiceDisableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
+
+      unless node
+        puts "ERROR: Node not found!"
+        next
+      end
+
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
 
@@ -151,6 +167,12 @@ class ServiceStartCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
+
+      unless node
+        puts "ERROR: Node not found!"
+        next
+      end
+
       list_of_services = node.attributes['redborder']['services']
 
       services.each do |service|
@@ -182,6 +204,12 @@ class ServiceStopCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
+
+      unless node
+        puts "ERROR: Node not found!"
+        next
+      end
+
       list_of_services = node.attributes['redborder']['services']
 
       services.each do |service|
