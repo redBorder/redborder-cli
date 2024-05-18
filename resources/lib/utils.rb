@@ -35,11 +35,17 @@ class Utils
   end
 
   # get node information from chef
+  # if node not found or error return nil (need to be handle by the call)
   def get_node(node_name)
     Chef::Config.from_file("/etc/chef/client.rb")
     Chef::Config[:client_key] = "/etc/chef/client.pem"
     Chef::Config[:http_retry_count] = 5
-    node = Chef::Node.load(node_name)
+
+    begin 
+      Chef::Node.load(node_name)
+    rescue
+      nil
+    end
   end
 
   # check if the parameter node is in the list of nodes
