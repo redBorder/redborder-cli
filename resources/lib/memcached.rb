@@ -51,6 +51,12 @@ class MemcachedStatusCmd < CmdParse::Command
 
     nodes.each do |node|
       node_info = utils.get_node(node)
+      
+      unless node
+        puts "ERROR: Node not found!"
+        next
+      end
+
       services = node_info.attributes['redborder']['services']
       hosts << node if services["memcached"]
     end
