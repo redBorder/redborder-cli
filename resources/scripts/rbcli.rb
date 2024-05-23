@@ -4,7 +4,7 @@ require 'cmdparse'
 
 $parser = CmdParse::CommandParser.new(handle_exceptions: :no_help)
 
-Dir["#{ENV['RBLIB']}/red/*.rb"].each { |file| require file }
+Dir["#{ENV['RBLIB']}/rbcli/*.rb"].each { |file| require file }
 
 $parser.global_options do |opt|
 	opt.on("-V","--verbose","Enable verbosity") do
@@ -12,7 +12,7 @@ $parser.global_options do |opt|
 	end
 end
 
-$parser.main_options.program_name = "red"
+$parser.main_options.program_name = "rbcli"
 $parser.main_options.version = "0.0.1"
 $parser.main_options.banner = "This is the redborder CLI program"
 
