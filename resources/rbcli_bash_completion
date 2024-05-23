@@ -1,7 +1,7 @@
-#  Completion for red:
+#  Completion for rbcli:
 #
 #
-_red()
+_rbcli()
 {
     local cur prev opts
     COMPREPLY=()
@@ -42,4 +42,4 @@ _red()
     fi
 
 }
-complete -F _red red
+complete -F _rbcli rbcli
