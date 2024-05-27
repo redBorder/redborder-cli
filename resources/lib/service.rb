@@ -19,9 +19,10 @@ class ServiceListCmd < CmdParse::Command
   YELLOW = "\033[33m"
 
   def initialize
-    $parser.data[:all_services] = false
+    $parser.data[:show_runtime] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
+    options.on('-r', '--runtime', 'Show runtime') { $parser.data[:show_runtime] = true }
   end
 
   def execute()
@@ -55,29 +56,58 @@ class ServiceListCmd < CmdParse::Command
     errors = 0
 
     # Paint service list
-    printf("=========================== Services ============================\n")
-    printf("%-33s %-10s\n", "Service", "Status(#{node_name})")
-    printf("-----------------------------------------------------------------\n")
+    if $parser.data[:show_runtime]
+      printf("================================= Services ==================================\n")
+      printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Runtime")
+      printf("-----------------------------------------------------------------------------\n")
+    else
+      printf("=========================== Services ============================\n")
+      printf("%-33s %-10s\n", "Service", "Status(#{node_name})")
+      printf("-----------------------------------------------------------------\n")
+    end
 
     systemctl_services.uniq.each do |systemd_service|
       if system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running = running + 1
-        printf("%-33s #{GREEN}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+        if $parser.data[:show_runtime]
+          printf("%-33s #{GREEN}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+        else
+          printf("%-33s #{GREEN}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        end
       elsif not_enable_services.include?systemd_service
         ret = "not running"
         stopped = stopped + 1
-        printf("%-33s #{YELLOW}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        runtime = "N/A"
+        if $parser.data[:show_runtime]
+          printf("%-33s #{YELLOW}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+        else
+          printf("%-33s #{YELLOW}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        end
       else
         ret = "not running!!"
         errors = errors + 1
-        printf("%-33s #{RED}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        runtime = "N/A"
+        if $parser.data[:show_runtime]
+          printf("%-33s #{RED}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+        else
+          printf("%-33s #{RED}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+        end
       end
     end
 
-    printf("-----------------------------------------------------------------\n")
+    if $parser.data[:show_runtime]
+      printf("-----------------------------------------------------------------------------\n")
+    else
+      printf("-----------------------------------------------------------------\n")
+    end
     printf("%-33s %-10s\n","Total:", systemctl_services.count)
-    printf("-----------------------------------------------------------------\n")
+    if $parser.data[:show_runtime]
+      printf("-----------------------------------------------------------------------------\n")
+    else
+      printf("-----------------------------------------------------------------\n")
+    end
     printf("Running: #{running}  /  Stopped: #{stopped}  /  Errors: #{errors}\n\n")
   end
 end
