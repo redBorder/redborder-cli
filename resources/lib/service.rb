@@ -13,17 +13,21 @@ class ServiceCmd < CmdParse::Command
 end
 
 class ServiceListCmd < CmdParse::Command
+  RESET = "\033[0m"
+  RED = "\033[31m"
+  GREEN = "\033[32m"
+  YELLOW = "\033[33m"
+
   def initialize
     $parser.data[:all_services] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
-    options.on('-x', '--extend', 'Extended information') { puts 'Extended information' }
-    options.on('-a', '--all', 'All services') { $parser.data[:all_services] = true }
   end
 
   def execute()
     utils = Utils.instance
-    node = utils.get_node(Socket.gethostname.split(".").first)
+    node_name = Socket.gethostname.split(".").first
+    node = utils.get_node(node_name)
 
     unless node
       puts 'ERROR: Node not found!'
@@ -31,24 +35,50 @@ class ServiceListCmd < CmdParse::Command
     end
 
     services = node.attributes['redborder']['services'] ||  []
-    systemd_services = node.attributes['redborder']['systemdservices']
+    systemd_services = node.attributes['redborder']['systemdservices'] || []
     systemctl_services = []
-    services.each do |service,enabled|
-      if $parser.data[:all_services] == false and enabled == false
-        next
-      else
-        if systemd_services and systemd_services[service] 
-          systemd_services[service].each do |systemd_service|
-            systemctl_services.push(systemd_service)
-          end
+    not_enable_services = []
+
+    services.each do |service, enabled|
+      not_enable_services.push(service) unless enabled
+
+      if systemd_services[service]
+        systemd_services[service].each do |systemd_service|
+          systemctl_services.push(systemd_service)
         end
       end
     end
 
+    # Counters
+    running = 0
+    stopped = 0
+    errors = 0
+
+    # Paint service list
+    printf("=========================== Services ============================\n")
+    printf("%-33s %-10s\n", "Service", "Status(#{node_name})")
+    printf("-----------------------------------------------------------------\n")
+
     systemctl_services.uniq.each do |systemd_service|
-          ret = system("systemctl status #{systemd_service} &>/dev/null") ? "OK" : "Fail"
-          puts "Status of service #{systemd_service}: #{ret}"
+      if system("systemctl status #{systemd_service} &>/dev/null")
+        ret = "running"
+        running = running + 1
+        printf("%-33s #{GREEN}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+      elsif not_enable_services.include?systemd_service
+        ret = "not running"
+        stopped = stopped + 1
+        printf("%-33s #{YELLOW}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+      else
+        ret = "not running!!"
+        errors = errors + 1
+        printf("%-33s #{RED}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+      end
     end
+
+    printf("-----------------------------------------------------------------\n")
+    printf("%-33s %-10s\n","Total:", systemctl_services.count)
+    printf("-----------------------------------------------------------------\n")
+    printf("Running: #{running}  /  Stopped: #{stopped}  /  Errors: #{errors}\n\n")
   end
 end
 
