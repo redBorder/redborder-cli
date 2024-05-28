@@ -20,9 +20,11 @@ class ServiceListCmd < CmdParse::Command
 
   def initialize
     $parser.data[:show_runtime] = false
+    $parser.data[:no_color] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
     options.on('-r', '--runtime', 'Show runtime') { $parser.data[:show_runtime] = true }
+    options.on('-n', '--no-color', 'Print without colors') { $parser.data[:no_color] = true }
   end
 
   def execute()
@@ -33,6 +35,13 @@ class ServiceListCmd < CmdParse::Command
     unless node
       puts 'ERROR: Node not found!'
       return
+    end
+
+    # Set colors
+    if $parser.data[:no_color]
+      red, green, yellow, reset = RESET
+    else
+      red, green, yellow, reset = RED, GREEN, YELLOW, RESET
     end
 
     services = node.attributes['redborder']['services'] ||  []
@@ -72,27 +81,27 @@ class ServiceListCmd < CmdParse::Command
         running = running + 1
         runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
         if $parser.data[:show_runtime]
-          printf("%-33s #{GREEN}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+          printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         else
-          printf("%-33s #{GREEN}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+          printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
       elsif not_enable_services.include?systemd_service
         ret = "not running"
         stopped = stopped + 1
         runtime = "N/A"
         if $parser.data[:show_runtime]
-          printf("%-33s #{YELLOW}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+          printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         else
-          printf("%-33s #{YELLOW}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+          printf("%-33s #{yellow}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
       else
         ret = "not running!!"
         errors = errors + 1
         runtime = "N/A"
         if $parser.data[:show_runtime]
-          printf("%-33s #{RED}%-33s#{RESET}%-10s\n", "#{systemd_service}:", ret, runtime)
+          printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         else
-          printf("%-33s #{RED}%-10s#{RESET}\n", "#{systemd_service}:", ret)
+          printf("%-33s #{red}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
       end
     end
