@@ -39,7 +39,7 @@ class ServiceListCmd < CmdParse::Command
 
     # Set colors
     if $parser.data[:no_color]
-      red, green, yellow, reset = RESET
+      red, green, yellow, reset = ''
     else
       red, green, yellow, reset = RED, GREEN, YELLOW, RESET
     end
