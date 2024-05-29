@@ -22,12 +22,12 @@ Requires: bash redborder-common redborder-rubyrvm bash-completion
 
 %install
 mkdir -p %{buildroot}/usr/lib/redborder/scripts
-mkdir -p %{buildroot}/usr/lib/redborder/lib/red
+mkdir -p %{buildroot}/usr/lib/redborder/lib/rbcli
 mkdir -p %{buildroot}/etc/bash_completion.d
-cp resources/lib/* %{buildroot}/usr/lib/redborder/lib/red
+cp resources/lib/* %{buildroot}/usr/lib/redborder/lib/rbcli
 cp resources/scripts/* %{buildroot}/usr/lib/redborder/scripts
-cp resources/red_bash_completion %{buildroot}/etc/bash_completion.d/red
-chmod 0644 %{buildroot}/usr/lib/redborder/lib/red/*
+cp resources/rbcli_bash_completion %{buildroot}/etc/bash_completion.d/rbcli
+chmod 0644 %{buildroot}/usr/lib/redborder/lib/rbcli/*
 chmod 0755 %{buildroot}/usr/lib/redborder/scripts/*
 chmod 0644 %{buildroot}/etc/bash_completion.d/*
 
@@ -40,16 +40,21 @@ chmod 0644 %{buildroot}/etc/bash_completion.d/*
 %defattr(0755,root,root)
 /usr/lib/redborder/scripts
 %defattr(0644,root,root)
-/usr/lib/redborder/lib/red/*
+/usr/lib/redborder/lib/rbcli/*
 /etc/bash_completion.d/*
 
 %doc
 
 %changelog
+* Thu May 23 2024 Miguel Negrón <manegron@redborder.com>
+- Rename red to rbcli
+
 * Wed Feb 01 2023 Luis Blanco <ljblanco@redborder.com> -
 - unliked reference for the IPS and Proxy for the red command
+
 * Tue Jan 21 2022 David Vanhoucke <dvanhoucke@redborder.com> - 0.0.8-1
 - adding extra functionality
+
 * Tue Jan 17 2017 Juan J. Prieto <jjprieto@redborder.com> - 0.0.1-1
 - first spec version
 
