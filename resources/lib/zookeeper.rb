@@ -72,7 +72,7 @@ class ZookeeperCleanCmd < CmdParse::Command
         sleep(10)
         service_start_cmd.execute("all", "kafka")
         sleep(10)
-        # TODO : create topics via red command
+        # TODO : create topics via rbcli command
         utils.remote_cmd(Socket.gethostname.split(".").first,"/usr/lib/redborder/bin/rb_create_topics")
 
     else

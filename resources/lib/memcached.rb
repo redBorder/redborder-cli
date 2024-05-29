@@ -124,7 +124,7 @@ class MemcachedGetKeysCmd < CmdParse::Command
   def execute(*pattern)
     # Credit to Graham King at http://www.darkcoding.net/software/memcached-list-all-keys/ for the original article on how to get the data from memcache in the first place.
     # Adapted by Pablo Nebrera (pablonebrera@eneotecnologia.com) --> rb_memcache_keys
-    # Adapted by Eduardo Reyes (eareyes@redborder.com) --> red command
+    # Adapted by Eduardo Reyes (eareyes@redborder.com) --> rbcli command
 
     config = YAML.load_file('/var/www/rb-rails/config/memcached_config.yml')
     memcachservers=[config["production"]["servers"].sample]
@@ -220,9 +220,9 @@ class MemcachedGetValueCmd < CmdParse::Command
     keys = "#{keys.join("' '")}"
 
     if $parser.data[:invert]
-      list_of_keys = `red memcached keys -v '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
+      list_of_keys = `rbcli memcached keys -v '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
     else
-      list_of_keys = `red memcached keys '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
+      list_of_keys = `rbcli memcached keys '#{keys}' | awk -F"|" '{print $4}' | tr -d '\n'`.gsub(/\s+/, " ").split
     end
 
     @memcached = Dalli::Client.new("memcached.service:11211", {:expires_in => 0})
