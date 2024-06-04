@@ -75,7 +75,7 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
 
-    systemctl_services.uniq.each do |systemd_service|
+    systemctl_services.uniq.sort.each do |systemd_service|
       if system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running = running + 1
