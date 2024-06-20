@@ -13,7 +13,7 @@ $parser.global_options do |opt|
 end
 
 $parser.main_options.program_name = "rbcli"
-$parser.main_options.version = "1.0.0"
+$parser.main_options.version = "1.0.2"
 $parser.main_options.banner = "This is the redborder CLI program"
 
 #$parser.main_options do |opt|
