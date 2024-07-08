@@ -188,7 +188,7 @@ class MemcachedGetKeysCmd < CmdParse::Command
 
           next if (next_row and !pattern.empty?) # Skip printing this key
 
-          printf("%5s %25s %13s %45s", row[0] + " |", row[1].to_s + " | ", row[2] + " | ", row[3])
+          printf("%5s %25s %13s %45s", row[0].to_s + " |", row[1].to_s + " | ", row[2].to_s + " | ", row[3].to_s)
           printf("\n")
           separator if row!=rows.last
 
@@ -199,7 +199,7 @@ class MemcachedGetKeysCmd < CmdParse::Command
       rescue StandardError => e
         puts e.message
       ensure
-        host.close unless host.nil?
+        host.close
       end
     end
   end
