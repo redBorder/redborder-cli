@@ -53,11 +53,11 @@ class ServiceListCmd < CmdParse::Command
       not_enable_services.push(service) unless enabled
 
       if systemd_services[service]
-        systemd_services[service].each do |systemd_service|
-          systemctl_services.push(systemd_service)
-        end
+        not_enable_services.concat(systemd_services[service]) unless services[service] # Some 'systemd services' needs to be included even if not in 'services'. I.e. minio
+        systemctl_services.concat(systemd_services[service])
       end
     end
+    not_enable_services.uniq!
 
     # Counters
     running = 0
@@ -292,4 +292,3 @@ class ServiceStopCmd < CmdParse::Command
 end
 
 $parser.add_command(ServiceCmd.new)
-
