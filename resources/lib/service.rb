@@ -17,6 +17,7 @@ class ServiceListCmd < CmdParse::Command
   RED = "\033[31m"
   GREEN = "\033[32m"
   YELLOW = "\033[33m"
+  BLINK = "\033[5m"
 
   def initialize
     $parser.data[:show_runtime] = true
@@ -30,21 +31,20 @@ class ServiceListCmd < CmdParse::Command
   def execute()
     utils = Utils.instance
     node_name = Socket.gethostname.split(".").first
-    node = utils.get_node(node_name)
-
-    unless node
-      puts 'ERROR: Node not found!'
-      return
-    end
 
     # Set colors
     if $parser.data[:no_color]
-      red, green, yellow, reset = ''
+      red, green, yellow, reset, blink = ''
     else
-      red, green, yellow, reset = RED, GREEN, YELLOW, RESET
+      red, green, yellow, reset, blink = RED, GREEN, YELLOW, RESET, BLINK
     end
 
-    services = JSON.parse(File.read("/etc/redborder/services.json"))
+    unless File.exist?('/etc/redborder/services.json')
+      puts 'ERROR: Service list not found'
+      return
+    end
+
+    services = JSON.parse(File.read('/etc/redborder/services.json'))
 
     # Counters
     running = 0
@@ -67,8 +67,23 @@ class ServiceListCmd < CmdParse::Command
         ret = "running"
         running = running + 1
         runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+
+        # Calculate the run time in seconds
+        total_seconds = 0
+        if runtime =~ /(\d+)min\s*(\d*)s*/
+          minutes = $1.to_i
+          seconds = $2.to_i
+          total_seconds = minutes * 60 + seconds
+        elsif runtime =~ /(\d+)s/
+          total_seconds = $1.to_i
+        end
+
         if $parser.data[:show_runtime]
-          printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+          if total_seconds < 60
+            printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
+          else
+            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+          end
         else
           printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
