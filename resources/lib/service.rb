@@ -19,11 +19,11 @@ class ServiceListCmd < CmdParse::Command
   YELLOW = "\033[33m"
 
   def initialize
-    $parser.data[:show_runtime] = false
+    $parser.data[:show_runtime] = true
     $parser.data[:no_color] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
-    options.on('-r', '--runtime', 'Show runtime') { $parser.data[:show_runtime] = true }
+    options.on('-q', '--quiet', 'Show list without runtime') { $parser.data[:show_runtime] = false }
     options.on('-n', '--no-color', 'Print without colors') { $parser.data[:no_color] = true }
   end
 
