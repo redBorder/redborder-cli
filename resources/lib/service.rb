@@ -17,47 +17,34 @@ class ServiceListCmd < CmdParse::Command
   RED = "\033[31m"
   GREEN = "\033[32m"
   YELLOW = "\033[33m"
+  BLINK = "\033[5m"
 
   def initialize
-    $parser.data[:show_runtime] = false
+    $parser.data[:show_runtime] = true
     $parser.data[:no_color] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
-    options.on('-r', '--runtime', 'Show runtime') { $parser.data[:show_runtime] = true }
+    options.on('-q', '--quiet', 'Show list without runtime') { $parser.data[:show_runtime] = false }
     options.on('-n', '--no-color', 'Print without colors') { $parser.data[:no_color] = true }
   end
 
   def execute()
     utils = Utils.instance
     node_name = Socket.gethostname.split(".").first
-    node = utils.get_node(node_name)
-
-    unless node
-      puts 'ERROR: Node not found!'
-      return
-    end
 
     # Set colors
     if $parser.data[:no_color]
-      red, green, yellow, reset = ''
+      red, green, yellow, reset, blink = ''
     else
-      red, green, yellow, reset = RED, GREEN, YELLOW, RESET
+      red, green, yellow, reset, blink = RED, GREEN, YELLOW, RESET, BLINK
     end
 
-    services = node.attributes['redborder']['services'] ||  []
-    systemd_services = node.attributes['redborder']['systemdservices'] || []
-    systemctl_services = []
-    not_enable_services = []
-
-    services.each do |service, enabled|
-      not_enable_services.push(service) unless enabled
-
-      if systemd_services[service]
-        not_enable_services.concat(systemd_services[service]) unless services[service] # Some 'systemd services' needs to be included even if not in 'services'. I.e. minio
-        systemctl_services.concat(systemd_services[service])
-      end
+    unless File.exist?('/etc/redborder/services.json')
+      puts 'ERROR: Services list not found'
+      return
     end
-    not_enable_services.uniq!
+
+    services = JSON.parse(File.read('/etc/redborder/services.json'))
 
     # Counters
     running = 0
@@ -75,17 +62,24 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
 
-    systemctl_services.uniq.sort.each do |systemd_service|
+    services.uniq.sort.each do |systemd_service, enabled|
       if system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running = running + 1
-        runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+
         if $parser.data[:show_runtime]
-          printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+          runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+
+          # Blink when runtime is less than a minute
+          if runtime.match?(/^\d+\s*s/)
+            printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
+          else
+            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+          end
         else
           printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
-      elsif not_enable_services.include?systemd_service
+      elsif !enabled
         ret = "not running"
         stopped = stopped + 1
         runtime = "N/A"
@@ -111,7 +105,7 @@ class ServiceListCmd < CmdParse::Command
     else
       printf("-----------------------------------------------------------------\n")
     end
-    printf("%-33s %-10s\n","Total:", systemctl_services.count)
+    printf("%-33s %-10s\n","Total:", services.count)
     if $parser.data[:show_runtime]
       printf("-----------------------------------------------------------------------------\n")
     else
