@@ -44,20 +44,7 @@ class ServiceListCmd < CmdParse::Command
       red, green, yellow, reset = RED, GREEN, YELLOW, RESET
     end
 
-    services = node.attributes['redborder']['services'] ||  []
-    systemd_services = node.attributes['redborder']['systemdservices'] || []
-    systemctl_services = []
-    not_enable_services = []
-
-    services.each do |service, enabled|
-      not_enable_services.push(service) unless enabled
-
-      if systemd_services[service]
-        not_enable_services.concat(systemd_services[service]) unless services[service] # Some 'systemd services' needs to be included even if not in 'services'. I.e. minio
-        systemctl_services.concat(systemd_services[service])
-      end
-    end
-    not_enable_services.uniq!
+    services = JSON.parse(File.read("/etc/redborder/services.json"))
 
     # Counters
     running = 0
@@ -75,7 +62,7 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
 
-    systemctl_services.uniq.sort.each do |systemd_service|
+    services.uniq.sort.each do |systemd_service, enabled|
       if system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running = running + 1
@@ -85,7 +72,7 @@ class ServiceListCmd < CmdParse::Command
         else
           printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
-      elsif not_enable_services.include?systemd_service
+      elsif !enabled
         ret = "not running"
         stopped = stopped + 1
         runtime = "N/A"
@@ -111,7 +98,7 @@ class ServiceListCmd < CmdParse::Command
     else
       printf("-----------------------------------------------------------------\n")
     end
-    printf("%-33s %-10s\n","Total:", systemctl_services.count)
+    printf("%-33s %-10s\n","Total:", services.count)
     if $parser.data[:show_runtime]
       printf("-----------------------------------------------------------------------------\n")
     else
