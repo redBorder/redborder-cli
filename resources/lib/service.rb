@@ -71,7 +71,7 @@ class ServiceListCmd < CmdParse::Command
           runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
 
           # Blink when runtime is less than a minute
-          if runtime_info.match?(/^\d+\s*s/)
+          if runtime.match?(/^\d+\s*s/)
             printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
           else
             printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
