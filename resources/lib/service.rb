@@ -40,7 +40,7 @@ class ServiceListCmd < CmdParse::Command
     end
 
     unless File.exist?('/etc/redborder/services.json')
-      puts 'ERROR: Service list not found'
+      puts 'ERROR: Services list not found'
       return
     end
 
