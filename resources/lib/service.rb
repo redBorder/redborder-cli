@@ -122,43 +122,57 @@ class ServiceEnableCmd < CmdParse::Command
     short_desc('Enable service from node')
   end
 
-  def execute(node, service=nil)
+  def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      service = node
-      nodes << Socket.gethostname.split(".").first 
+    unless node.nil?
+      nodes = utils.check_nodes(node)
+    else
+      nodes = Socket.gethostname.split(".").first.split(',')
     end
 
     nodes.each do |n|
       node = utils.get_node(n)
-
       unless node
         puts "ERROR: Node not found!"
         next
       end
-
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
-    
-      group_of_the_service = systemd_services[service]
-      services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
+      if node.role?('manager')
+        group_of_the_service = systemd_services[service]
+        services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
 
-      role = Chef::Role.load(n)
-      role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+        role = Chef::Role.load(n)
+        role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
 
-      # save info at the node too
-      node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-      node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
-      
-      services_with_same_group.each do |s|
-        role.override_attributes["redborder"]["services"][s] = true
-        node.override!["redborder"]["services"]["overwrite"][s] = true
-        puts "#{s} enabled on #{n}"
+        # save info at the node too
+        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
+        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+
+        services_with_same_group.each do |s|
+          role.override_attributes["redborder"]["services"][s] = true
+          node.override!["redborder"]["services"]["overwrite"][s] = true
+          puts "#{s} enabled on #{n}"
+        end
+        role.save
+      else
+        enabled_services = {}
+        systemd_services.each do |service_name, systemd_name|
+          enabled_services[systemd_name.first] = services[service_name]
+        end
+        enabled_services[service] = true if enabled_services.include?(service)
+
+        systemd_services.each do |service_name, systemd_name|
+          services[service_name] = true if service_name == service
+        end
+        puts "#{service} enabled on #{node.name}"
+        puts 'Saving services enablement into /etc/redborder/services.json'
+        File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+
+        node.save
       end
-      role.save
     end
   end
 end
@@ -170,43 +184,56 @@ class ServiceDisableCmd < CmdParse::Command
     short_desc('Disable service from node')
   end
 
-  def execute(node, service=nil)
+  def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      service = node
-      nodes << Socket.gethostname.split(".").first 
+    unless node.nil?
+      nodes = utils.check_nodes(node)
+    else
+      nodes = Socket.gethostname.split(".").first.split(',')
     end
 
     nodes.each do |n|
       node = utils.get_node(n)
-
       unless node
         puts "ERROR: Node not found!"
         next
       end
-
       services = node.attributes['redborder']['services'] || []
-      systemd_services = node.attributes['redborder']['systemdservices']
+      systemd_services = node.attributes['redborder']['systemdservices'] || []
+      if node.role?('manager')
+        group_of_the_service = systemd_services[service]
+        services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
 
-      group_of_the_service = systemd_services[service]
-      services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
+        role = Chef::Role.load(n)
+        role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
 
-      role = Chef::Role.load(n)
-      role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+        # save info at the node too
+        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
+        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
 
-      # save info at the node too
-      node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-      node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+        services_with_same_group.each do |s|
+          role.override_attributes["redborder"]["services"][s] = true
+          node.override!["redborder"]["services"]["overwrite"][s] = true
+          puts "#{s} enabled on #{n}"
+        end
+        role.save
+      else
+        enabled_services = {}
+        systemd_services.each do |service_name, systemd_name|
+          enabled_services[systemd_name.first] = services[service_name]
+        end
+        enabled_services[service] = false if enabled_services.include?(service)
 
-      services_with_same_group.each do |s|
-         role.override_attributes["redborder"]["services"][s] = false
-         node.override!["redborder"]["services"]["overwrite"][s] = false
-        puts "#{s} disabled on #{n}"
+        systemd_services.each do |service_name, systemd_name|
+          node.override['redborder']['services'][service_name] = false if systemd_name.join(',') == service
+        end
+        puts "#{service} disabled on #{node.name}"
+        puts 'Saving services disablement into /etc/redborder/services.json'
+        File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+        node.save
       end
-      role.save
     end
   end
 end
@@ -222,10 +249,16 @@ class ServiceStartCmd < CmdParse::Command
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
+    begin
+      if node != Socket.gethostname.split(".").first
+        services.insert(0, node)
+        nodes = Socket.gethostname.split(".").first.split(',')
+      else
+        nodes = utils.check_nodes(node)
+      end
+    rescue Errno::ECONNREFUSED
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes = Socket.gethostname.split(".").first.split(',')
     end
 
     nodes.each do |n|
@@ -237,10 +270,14 @@ class ServiceStartCmd < CmdParse::Command
       end
 
       list_of_services = node.attributes['redborder']['services']
-
-      services.each do |service|
-        if list_of_services[service]
-          ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? "started" : "failed to start"
+      if node.role?('manager')
+        services.each do |service|
+          ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? 'started' : 'failed to start'
+          puts "#{service} #{ret} on #{n}"
+        end
+      else
+        services.each do |service|
+          ret = `systemctl start #{service} &>/dev/null` ? 'started' : 'failed to start'
           puts "#{service} #{ret} on #{n}"
         end
       end
@@ -255,14 +292,20 @@ class ServiceStopCmd < CmdParse::Command
     short_desc('Stop services from node')
   end
 
-  def execute(node,*services)
+  def execute(node, *services)
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
+    begin
+      if node != Socket.gethostname.split(".").first
+        services.insert(0, node)
+        nodes = Socket.gethostname.split(".").first.split(',')
+      else
+        nodes = utils.check_nodes(node)
+      end
+    rescue Errno::ECONNREFUSED
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes = Socket.gethostname.split(".").first.split(',')
     end
 
     nodes.each do |n|
@@ -274,10 +317,14 @@ class ServiceStopCmd < CmdParse::Command
       end
 
       list_of_services = node.attributes['redborder']['services']
-
-      services.each do |service|
-        if list_of_services[service]
-          ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? "stopped" : "failed to stop"
+      if node.role?('manager')
+        services.each do |service|
+          ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? 'stopped' : 'failed to stop'
+          puts "#{service} #{ret} on #{n}"
+        end
+      else
+        services.each do |service|
+          ret = `systemctl stop #{service} &>/dev/null` ? 'stopped' : 'failed to stop'
           puts "#{service} #{ret} on #{n}"
         end
       end
