@@ -125,6 +125,7 @@ class ServiceEnableCmd < CmdParse::Command
   def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
+    saved = false
 
     unless node.nil?
       nodes = utils.check_nodes(node)
@@ -165,13 +166,17 @@ class ServiceEnableCmd < CmdParse::Command
         enabled_services[service] = true if enabled_services.include?(service)
 
         systemd_services.each do |service_name, systemd_name|
-          services[service_name] = true if service_name == service
+          if systemd_name.join(',') == service
+            node.override['redborder']['services'][service_name] = true
+            saved = true
+          end
         end
-        puts "#{service} enabled on #{node.name}"
-        puts 'Saving services enablement into /etc/redborder/services.json'
-        File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
-
-        node.save
+        if saved
+          puts "#{service} enabled on #{node.name}"
+          puts 'Saving services enablement into /etc/redborder/services.json'
+          File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+          node.save
+        end
       end
     end
   end
@@ -187,6 +192,7 @@ class ServiceDisableCmd < CmdParse::Command
   def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
+    saved = false
 
     unless node.nil?
       nodes = utils.check_nodes(node)
@@ -214,9 +220,9 @@ class ServiceDisableCmd < CmdParse::Command
         node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
 
         services_with_same_group.each do |s|
-          role.override_attributes["redborder"]["services"][s] = true
-          node.override!["redborder"]["services"]["overwrite"][s] = true
-          puts "#{s} enabled on #{n}"
+          role.override_attributes["redborder"]["services"][s] = false
+          node.override!["redborder"]["services"]["overwrite"][s] = false
+          puts "#{s} disabled on #{n}"
         end
         role.save
       else
@@ -227,12 +233,17 @@ class ServiceDisableCmd < CmdParse::Command
         enabled_services[service] = false if enabled_services.include?(service)
 
         systemd_services.each do |service_name, systemd_name|
-          node.override['redborder']['services'][service_name] = false if systemd_name.join(',') == service
+          if systemd_name.join(',') == service
+            node.override['redborder']['services'][service_name] = false
+            saved = true
+          end
         end
-        puts "#{service} disabled on #{node.name}"
-        puts 'Saving services disablement into /etc/redborder/services.json'
-        File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
-        node.save
+        if saved
+          puts "#{service} disabled on #{node.name}"
+          puts 'Saving services disablement into /etc/redborder/services.json'
+          File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+          node.save
+        end
       end
     end
   end
@@ -277,7 +288,8 @@ class ServiceStartCmd < CmdParse::Command
         end
       else
         services.each do |service|
-          ret = `systemctl start #{service} &>/dev/null` ? 'started' : 'failed to start'
+          `systemctl start #{service} &>/dev/null`
+          ret = $?.success? ? 'started' : 'failed to start'
           puts "#{service} #{ret} on #{n}"
         end
       end
@@ -324,7 +336,8 @@ class ServiceStopCmd < CmdParse::Command
         end
       else
         services.each do |service|
-          ret = `systemctl stop #{service} &>/dev/null` ? 'stopped' : 'failed to stop'
+          `systemctl start #{service} &>/dev/null`
+          ret = $?.success? ? 'stopped' : 'failed to stop'
           puts "#{service} #{ret} on #{n}"
         end
       end
