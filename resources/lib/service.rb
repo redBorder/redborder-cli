@@ -127,10 +127,19 @@ class ServiceEnableCmd < CmdParse::Command
     utils = Utils.instance
     saved = false
 
-    unless node.nil?
-      nodes = utils.check_nodes(node)
-    else
-      nodes = Socket.gethostname.split(".").first.split(',')
+    begin
+      nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services = node
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -157,6 +166,7 @@ class ServiceEnableCmd < CmdParse::Command
           node.override!["redborder"]["services"]["overwrite"][s] = true
           puts "#{s} enabled on #{n}"
         end
+        puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
         role.save
       else
         enabled_services = {}
@@ -176,6 +186,8 @@ class ServiceEnableCmd < CmdParse::Command
           puts 'Saving services enablement into /etc/redborder/services.json'
           File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
           node.save
+        else
+          puts "ERROR: Service not found"
         end
       end
     end
@@ -194,10 +206,19 @@ class ServiceDisableCmd < CmdParse::Command
     utils = Utils.instance
     saved = false
 
-    unless node.nil?
-      nodes = utils.check_nodes(node)
-    else
-      nodes = Socket.gethostname.split(".").first.split(',')
+    begin
+      nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services = node
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -224,6 +245,7 @@ class ServiceDisableCmd < CmdParse::Command
           node.override!["redborder"]["services"]["overwrite"][s] = false
           puts "#{s} disabled on #{n}"
         end
+        puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
         role.save
       else
         enabled_services = {}
@@ -243,6 +265,8 @@ class ServiceDisableCmd < CmdParse::Command
           puts 'Saving services disablement into /etc/redborder/services.json'
           File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
           node.save
+        else
+          puts "ERROR: Service not found"
         end
       end
     end
@@ -261,15 +285,18 @@ class ServiceStartCmd < CmdParse::Command
     utils = Utils.instance
 
     begin
-      if node != Socket.gethostname.split(".").first
+      nodes = utils.check_nodes(node)
+      if nodes.count == 0
         services.insert(0, node)
-        nodes = Socket.gethostname.split(".").first.split(',')
-      else
-        nodes = utils.check_nodes(node)
+        nodes << Socket.gethostname.split(".").first
       end
-    rescue Errno::ECONNREFUSED
-      services.insert(0, node)
-      nodes = Socket.gethostname.split(".").first.split(',')
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -280,17 +307,31 @@ class ServiceStartCmd < CmdParse::Command
         next
       end
 
-      list_of_services = node.attributes['redborder']['services']
+      systemd_services = node.attributes['redborder']['systemdservices']
       if node.role?('manager')
         services.each do |service|
-          ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? 'started' : 'failed to start'
-          puts "#{service} #{ret} on #{n}"
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? 'started' : 'failed to start'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       else
         services.each do |service|
-          `systemctl start #{service} &>/dev/null`
-          ret = $?.success? ? 'started' : 'failed to start'
-          puts "#{service} #{ret} on #{n}"
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              `systemctl start #{service} &>/dev/null`
+              ret = $?.success? ? 'started' : 'failed to start'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       end
     end
@@ -309,15 +350,18 @@ class ServiceStopCmd < CmdParse::Command
     utils = Utils.instance
 
     begin
-      if node != Socket.gethostname.split(".").first
+      nodes = utils.check_nodes(node)
+      if nodes.count == 0
         services.insert(0, node)
-        nodes = Socket.gethostname.split(".").first.split(',')
-      else
-        nodes = utils.check_nodes(node)
+        nodes << Socket.gethostname.split(".").first
       end
-    rescue Errno::ECONNREFUSED
-      services.insert(0, node)
-      nodes = Socket.gethostname.split(".").first.split(',')
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -328,17 +372,31 @@ class ServiceStopCmd < CmdParse::Command
         next
       end
 
-      list_of_services = node.attributes['redborder']['services']
+      systemd_services = node.attributes['redborder']['systemdservices']
       if node.role?('manager')
         services.each do |service|
-          ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? 'stopped' : 'failed to stop'
-          puts "#{service} #{ret} on #{n}"
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? 'stopped' : 'failed to stop'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       else
         services.each do |service|
-          `systemctl start #{service} &>/dev/null`
-          ret = $?.success? ? 'stopped' : 'failed to stop'
-          puts "#{service} #{ret} on #{n}"
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              `systemctl stop #{service} &>/dev/null`
+              ret = $?.success? ? 'stopped' : 'failed to stop'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       end
     end
