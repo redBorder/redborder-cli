@@ -16,6 +16,7 @@ class ServiceListCmd < CmdParse::Command
   RESET = "\033[0m"
   RED = "\033[31m"
   GREEN = "\033[32m"
+  BLUE = "\033[34m"
   YELLOW = "\033[33m"
   BLINK = "\033[5m"
 
@@ -34,9 +35,9 @@ class ServiceListCmd < CmdParse::Command
 
     # Set colors
     if $parser.data[:no_color]
-      red, green, yellow, reset, blink = ''
+      red, green, yellow, blue, reset, blink = ''
     else
-      red, green, yellow, reset, blink = RED, GREEN, YELLOW, RESET, BLINK
+      red, green, yellow, blue, reset, blink = RED, GREEN, YELLOW, BLUE, RESET, BLINK
     end
 
     unless File.exist?('/etc/redborder/services.json')
@@ -45,10 +46,12 @@ class ServiceListCmd < CmdParse::Command
     end
 
     services = JSON.parse(File.read('/etc/redborder/services.json'))
+    external_services = JSON.parse(File.read('/var/chef/data/data_bag/rBglobal/external_services.json'))
 
     # Counters
     running = 0
     stopped = 0
+    external = 0
     errors = 0
 
     # Paint service list
@@ -88,6 +91,16 @@ class ServiceListCmd < CmdParse::Command
         else
           printf("%-33s #{yellow}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
+      elsif (external_services.include?(systemd_service) && external_services[systemd_service] == "external") ||
+        (systemd_service == 'minio' && external_services.include?('s3') && external_services['s3'] == 'external')
+        ret = "external"
+        external = external + 1
+        runtime = "N/A"
+        if $parser.data[:show_runtime]
+          printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+        else
+          printf("%-33s #{blue}%-10s#{reset}\n", "#{systemd_service}:", ret)
+        end
       else
         ret = "not running!!"
         errors = errors + 1
@@ -111,7 +124,7 @@ class ServiceListCmd < CmdParse::Command
     else
       printf("-----------------------------------------------------------------\n")
     end
-    printf("Running: #{running}  /  Stopped: #{stopped}  /  Errors: #{errors}\n\n")
+    printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
   end
 end
 
@@ -129,7 +142,7 @@ class ServiceEnableCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       service = node
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
@@ -142,7 +155,7 @@ class ServiceEnableCmd < CmdParse::Command
 
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
-    
+
       group_of_the_service = systemd_services[service]
       services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
 
@@ -152,7 +165,7 @@ class ServiceEnableCmd < CmdParse::Command
       # save info at the node too
       node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
       node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
-      
+
       services_with_same_group.each do |s|
         role.override_attributes["redborder"]["services"][s] = true
         node.override!["redborder"]["services"]["overwrite"][s] = true
@@ -177,7 +190,7 @@ class ServiceDisableCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       service = node
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
@@ -225,7 +238,7 @@ class ServiceStartCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
@@ -262,7 +275,7 @@ class ServiceStopCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
