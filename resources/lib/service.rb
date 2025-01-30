@@ -129,7 +129,7 @@ class ServiceEnableCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       service = node
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
@@ -142,7 +142,7 @@ class ServiceEnableCmd < CmdParse::Command
 
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
-    
+
       group_of_the_service = systemd_services[service]
       services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
 
@@ -152,7 +152,7 @@ class ServiceEnableCmd < CmdParse::Command
       # save info at the node too
       node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
       node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
-      
+
       services_with_same_group.each do |s|
         role.override_attributes["redborder"]["services"][s] = true
         node.override!["redborder"]["services"]["overwrite"][s] = true
@@ -186,8 +186,8 @@ class ServiceDisableCmd < CmdParse::Command
         n_node = utils.get_node(n)
         next unless n_node
         role = Chef::Role.load(n)
-        enabled_services = role.override_attributes['redborder']['services'] || {}
-        total_enabled_nodes += 1 if enabled_services['s3']
+        s3_role = role.override_attributes["redborder"]["services"]["s3"]
+        total_enabled_nodes += 1 if s3_role
       end
 
       if total_enabled_nodes <= 1
@@ -241,7 +241,7 @@ class ServiceStartCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
@@ -278,7 +278,7 @@ class ServiceStopCmd < CmdParse::Command
     nodes = utils.check_nodes(node)
     if (nodes.count == 0)
       services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first 
+      nodes << Socket.gethostname.split(".").first
     end
 
     nodes.each do |n|
