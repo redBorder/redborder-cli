@@ -193,6 +193,22 @@ class ServiceDisableCmd < CmdParse::Command
       nodes << Socket.gethostname.split(".").first
     end
 
+    if service == 's3'
+      total_enabled_nodes = 0
+      utils.check_nodes("all").each do |n|
+        n_node = utils.get_node(n)
+        next unless n_node
+        role = Chef::Role.load(n)
+        s3_role = role.override_attributes["redborder"]["services"]["s3"]
+        total_enabled_nodes += 1 if s3_role
+      end
+
+      if total_enabled_nodes <= 1
+        puts "ERROR: Service 's3' is enabled on only one node. Cannot disable it."
+        return
+      end
+    end
+
     nodes.each do |n|
       node = utils.get_node(n)
 
@@ -205,18 +221,18 @@ class ServiceDisableCmd < CmdParse::Command
       systemd_services = node.attributes['redborder']['systemdservices']
 
       group_of_the_service = systemd_services[service]
-      services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
+      services_with_same_group = systemd_services.select { |s, group| group == group_of_the_service }.keys || []
 
       role = Chef::Role.load(n)
-      role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+      role.override_attributes["redborder"]["services"] = {} unless role.override_attributes["redborder"].include?("services")
 
-      # save info at the node too
+      # Save info at the node too
       node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
       node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
 
       services_with_same_group.each do |s|
-         role.override_attributes["redborder"]["services"][s] = false
-         node.override!["redborder"]["services"]["overwrite"][s] = false
+        role.override_attributes["redborder"]["services"][s] = false
+        node.override!["redborder"]["services"]["overwrite"][s] = false
         puts "#{s} disabled on #{n}"
       end
       role.save
