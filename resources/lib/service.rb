@@ -46,7 +46,7 @@ class ServiceListCmd < CmdParse::Command
     end
 
     services = JSON.parse(File.read('/etc/redborder/services.json'))
-    external_services = JSON.parse(File.read('/var/chef/data/data_bag/rBglobal/external_services.json'))
+    external_services = JSON.parse(File.read('/var/chef/data/data_bag/rBglobal/external_services.json')) rescue {}
 
     # Counters
     running = 0
