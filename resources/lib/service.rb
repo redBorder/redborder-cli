@@ -135,43 +135,74 @@ class ServiceEnableCmd < CmdParse::Command
     short_desc('Enable service from node')
   end
 
-  def execute(node, service=nil)
+  def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
+    saved = false
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      service = node
-      nodes << Socket.gethostname.split(".").first
+    begin
+      nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services = node
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
       node = utils.get_node(n)
-
       unless node
         puts "ERROR: Node not found!"
         next
       end
-
       services = node.attributes['redborder']['services'] || []
       systemd_services = node.attributes['redborder']['systemdservices']
+      if node.role?('manager')
+        group_of_the_service = systemd_services[service]
+        services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
 
-      group_of_the_service = systemd_services[service]
-      services_with_same_group = systemd_services.select{|service,group| group == group_of_the_service }.keys || []
+        role = Chef::Role.load(n)
+        role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
 
-      role = Chef::Role.load(n)
-      role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+        # save info at the node too
+        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
+        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
 
-      # save info at the node too
-      node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-      node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+        services_with_same_group.each do |s|
+          role.override_attributes["redborder"]["services"][s] = true
+          node.override!["redborder"]["services"]["overwrite"][s] = true
+          puts "#{s} enabled on #{n}"
+        end
+        puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
+        role.save
+      else
+        enabled_services = {}
+        systemd_services.each do |service_name, systemd_name|
+          enabled_services[systemd_name.first] = services[service_name]
+        end
+        enabled_services[service] = true if enabled_services.include?(service)
 
-      services_with_same_group.each do |s|
-        role.override_attributes["redborder"]["services"][s] = true
-        node.override!["redborder"]["services"]["overwrite"][s] = true
-        puts "#{s} enabled on #{n}"
+        systemd_services.each do |service_name, systemd_name|
+          if systemd_name.join(',') == service
+            node.override['redborder']['services'][service_name] = true
+            saved = true
+          end
+        end
+        if saved
+          puts "#{service} enabled on #{node.name}"
+          puts 'Saving services enablement into /etc/redborder/services.json'
+          File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+          node.save
+        else
+          puts "ERROR: Service not found"
+        end
       end
-      role.save
     end
   end
 end
@@ -183,14 +214,24 @@ class ServiceDisableCmd < CmdParse::Command
     short_desc('Disable service from node')
   end
 
-  def execute(node, service=nil)
+  def execute(node=nil, service)
     nodes = []
     utils = Utils.instance
+    saved = false
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      service = node
-      nodes << Socket.gethostname.split(".").first
+    begin
+      nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services = node
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     if service == 's3'
@@ -211,31 +252,52 @@ class ServiceDisableCmd < CmdParse::Command
 
     nodes.each do |n|
       node = utils.get_node(n)
-
       unless node
         puts "ERROR: Node not found!"
         next
       end
-
       services = node.attributes['redborder']['services'] || []
-      systemd_services = node.attributes['redborder']['systemdservices']
+      systemd_services = node.attributes['redborder']['systemdservices'] || []
+      if node.role?('manager')
+        group_of_the_service = systemd_services[service]
+        services_with_same_group = systemd_services.select { |s, group| group == group_of_the_service }.keys || []
 
-      group_of_the_service = systemd_services[service]
-      services_with_same_group = systemd_services.select { |s, group| group == group_of_the_service }.keys || []
+        role = Chef::Role.load(n)
+        role.override_attributes["redborder"]["services"] = {} unless role.override_attributes["redborder"].include?("services")
 
-      role = Chef::Role.load(n)
-      role.override_attributes["redborder"]["services"] = {} unless role.override_attributes["redborder"].include?("services")
+        # Save info at the node too
+        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
+        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
 
-      # Save info at the node too
-      node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-      node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+        services_with_same_group.each do |s|
+          role.override_attributes["redborder"]["services"][s] = false
+          node.override!["redborder"]["services"]["overwrite"][s] = false
+          puts "#{s} disabled on #{n}"
+        end
+        puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
+        role.save
+      else
+        enabled_services = {}
+        systemd_services.each do |service_name, systemd_name|
+          enabled_services[systemd_name.first] = services[service_name]
+        end
+        enabled_services[service] = false if enabled_services.include?(service)
 
-      services_with_same_group.each do |s|
-        role.override_attributes["redborder"]["services"][s] = false
-        node.override!["redborder"]["services"]["overwrite"][s] = false
-        puts "#{s} disabled on #{n}"
+        systemd_services.each do |service_name, systemd_name|
+          if systemd_name.join(',') == service
+            node.override['redborder']['services'][service_name] = false
+            saved = true
+          end
+        end
+        if saved
+          puts "#{service} disabled on #{node.name}"
+          puts 'Saving services disablement into /etc/redborder/services.json'
+          File.write('/etc/redborder/services.json', JSON.pretty_generate(enabled_services))
+          node.save
+        else
+          puts "ERROR: Service not found"
+        end
       end
-      role.save
     end
   end
 end
@@ -251,10 +313,19 @@ class ServiceStartCmd < CmdParse::Command
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first
+    begin
+      nodes = utils.check_nodes(node)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -265,12 +336,31 @@ class ServiceStartCmd < CmdParse::Command
         next
       end
 
-      list_of_services = node.attributes['redborder']['services']
-
-      services.each do |service|
-        if list_of_services[service]
-          ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? "started" : "failed to start"
-          puts "#{service} #{ret} on #{n}"
+      systemd_services = node.attributes['redborder']['systemdservices']
+      if node.role?('manager')
+        services.each do |service|
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              ret = utils.remote_cmd(n, "systemctl start #{service} &>/dev/null") ? 'started' : 'failed to start'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
+        end
+      else
+        services.each do |service|
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              `systemctl start #{service} &>/dev/null`
+              ret = $?.success? ? 'started' : 'failed to start'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       end
     end
@@ -284,14 +374,23 @@ class ServiceStopCmd < CmdParse::Command
     short_desc('Stop services from node')
   end
 
-  def execute(node,*services)
+  def execute(node, *services)
     nodes = []
     utils = Utils.instance
 
-    nodes = utils.check_nodes(node)
-    if (nodes.count == 0)
-      services.insert(0, node)
-      nodes << Socket.gethostname.split(".").first
+    begin
+      nodes = utils.check_nodes(node)
+      if nodes.count == 0
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
+    rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
+      if node == Socket.gethostname.split(".").first
+        nodes << node
+      else
+        services.insert(0, node)
+        nodes << Socket.gethostname.split(".").first
+      end
     end
 
     nodes.each do |n|
@@ -302,12 +401,31 @@ class ServiceStopCmd < CmdParse::Command
         next
       end
 
-      list_of_services = node.attributes['redborder']['services']
-
-      services.each do |service|
-        if list_of_services[service]
-          ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? "stopped" : "failed to stop"
-          puts "#{service} #{ret} on #{n}"
+      systemd_services = node.attributes['redborder']['systemdservices']
+      if node.role?('manager')
+        services.each do |service|
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? 'stopped' : 'failed to stop'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
+        end
+      else
+        services.each do |service|
+          found = false
+          systemd_services.each_value do |v|
+            if v.include?(service)
+              `systemctl stop #{service} &>/dev/null`
+              ret = $?.success? ? 'stopped' : 'failed to stop'
+              puts "#{service} #{ret} on #{n}"
+              found = true
+            end
+          end
+          puts "#{service} is not found on #{n}" unless found
         end
       end
     end
