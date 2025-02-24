@@ -48,7 +48,7 @@ class ZookeeperCleanCmd < CmdParse::Command
     puts "stopping chef-client in all nodes"
     service_stop_cmd.execute("all","chef-client")
     puts "stopping services in all nodes"
-    service_stop_cmd.execute("all","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka")
+    service_stop_cmd.execute("all","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka", "f2k", "sfacctd")
     puts "stopping zookeeper in all nodes"
     service_stop_cmd.execute("all","zookeeper","zookeeper2")
  
@@ -83,7 +83,7 @@ class ZookeeperCleanCmd < CmdParse::Command
         sleep(10)
     end
 
-    service_start_cmd.execute("all", "kafka","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash")
+    service_start_cmd.execute("all", "kafka","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash", "f2k", "sfacctd")
     service_start_cmd.execute("all", "chef-client")
   end
 
