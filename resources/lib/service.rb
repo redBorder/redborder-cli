@@ -240,7 +240,11 @@ class ServiceDisableCmd < CmdParse::Command
         n_node = utils.get_node(n)
         next unless n_node
         role = Chef::Role.load(n)
-        s3_role = role.override_attributes["redborder"]["services"]["s3"]
+        if role.override_attributes.dig('redborder','services','s3').nil?
+          s3_role = n_node['redborder']['services']['s3']
+        else
+          s3_role = role.override_attributes["redborder"]["services"]["s3"]
+        end
         total_enabled_nodes += 1 if s3_role
       end
 
