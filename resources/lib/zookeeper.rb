@@ -27,6 +27,7 @@ class ZookeeperCleanCmd < CmdParse::Command
     options.on('-f', '--force', 'Force clean') { $parser.data[:force_clean] = true  }
     options.on('-c', '--consumer', 'Delete Consumer data') { $parser.data[:delete_consumer] = true  }
     options.on('-d', '--druid', 'Delete druid data') { $parser.data[:delete_druid] = true  }
+    options.on('-p', '--partitions', 'Reassign partitions') { $parser.data[:reassign_partitions] = true  }
   end
 
   def execute()
@@ -48,42 +49,48 @@ class ZookeeperCleanCmd < CmdParse::Command
     puts "stopping chef-client in all nodes"
     service_stop_cmd.execute("all","chef-client")
     puts "stopping services in all nodes"
-    service_stop_cmd.execute("all","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka", "f2k", "sfacctd")
+    service_stop_cmd.execute("all","druid-realtime","druid-indexer","druid-overlord","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka", "f2k", "sfacctd")
     puts "stopping zookeeper in all nodes"
     service_stop_cmd.execute("all","zookeeper","zookeeper2")
  
-    if (!$parser.data[:delete_consumer] and !$parser.data[:delete_druid])
- 
-        puts "deleting all zookeeper data"
+
+    puts "deleting all zookeeper data on disk"
+    nodes.each do |n|
+        utils.remote_cmd(n, "rm -rf /tmp/zookeeper/version-2/* &>/dev/null")
+        utils.remote_cmd(n, "rm -rf /tmp/zookeeper2/version-2/* &>/dev/null")
+    end
+    
+    if $parser.data[:clean_kafka]
+        puts "deleting kafka data on disk"
         nodes.each do |n|
-            utils.remote_cmd(n, "rm -rf /tmp/zookeeper/version-2/* &>/dev/null")
-            utils.remote_cmd(n, "rm -rf /tmp/zookeeper2/version-2/* &>/dev/null")
+            utils.remote_cmd(n, "rm -rf /tmp/kafka/* &>/dev/null")
         end
-        
-        puts "deleting kafka data"
-        if $parser.data[:clean_kafka]
-            nodes.each do |n|
-                utils.remote_cmd(n, "rm -rf /tmp/kafka/* &>/dev/null")
-            end
-        end
-
-        puts "start services and create topics"
-        service_start_cmd.execute("all", "zookeeper","zookeeper2")
-        sleep(10)
-        service_start_cmd.execute("all", "kafka")
-        sleep(10)
-        # TODO : create topics via rbcli command
-        utils.remote_cmd(Socket.gethostname.split(".").first,"/usr/lib/redborder/bin/rb_create_topics")
-
-    else
-        puts "deleting specific zookeeper data"
-        system("echo \"rmr /druid\" | /usr/bin/zkCli.sh -server zookeeper.service &>/dev/null") if $parser.data[:delete_druid]
-        system("echo \"rmr /consumers\" | /usr/bin/zkCli.sh -server zookeeper.service &>/dev/null") if $parser.data[:delete_consumer]
-        service_start_cmd.execute("all", "zookeeper","zookeeper2")
-        sleep(10)
     end
 
-    service_start_cmd.execute("all", "kafka","druid-realtime","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash", "f2k", "sfacctd")
+    puts "start zookeeper service"
+    service_start_cmd.execute("all", "zookeeper","zookeeper2")
+    sleep(10)
+    puts "start kafka service"
+    service_start_cmd.execute("all", "kafka")
+    sleep(10)
+    # TODO : create topics via rbcli command
+    puts "start kafka service"
+    puts "creating kafka topics"
+    utils.remote_cmd(Socket.gethostname.split(".").first,"/usr/lib/redborder/bin/rb_create_topics")
+    if $parser.data[:reassign_partitions]
+      puts "calculating kafka topics partitions and assign them"
+      utils.remote_cmd(Socket.gethostname.split(".").first,"/usr/lib/redborder/bin/rb_reassign_partitions -de")
+    end
+
+    if $parser.data[:delete_druid]
+      puts "delete druid data in zookeeper"
+      system("echo \"deleteall /druid\" | /usr/bin/zkCli.sh -server zookeeper.service &>/dev/null")
+    end
+    if $parser.data[:delete_consumer]
+      puts "delete consumer data in zookeeper"
+      system("echo \"deleteall /consumers\" | /usr/bin/zkCli.sh -server zookeeper.service &>/dev/null") if $parser.data[:delete_consumer]
+    end
+
     service_start_cmd.execute("all", "chef-client")
   end
 
