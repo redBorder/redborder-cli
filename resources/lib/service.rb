@@ -9,6 +9,137 @@ class ServiceCmd < CmdParse::Command
     add_command(ServiceDisableCmd.new, default: false)
     add_command(ServiceStartCmd.new, default: false)
     add_command(ServiceStopCmd.new, default: false)
+    add_command(ServiceAllCmd.new, default: false)
+  end
+end
+
+class ServiceAllCmd < CmdParse::Command
+  RESET, GREEN, YELLOW, BLUE, RED, BLINK =
+    "\e[0m", "\e[32m", "\e[33m", "\e[34m", "\e[31m", "\e[5m"
+
+  def initialize
+    $parser.data[:show_runtime] = true
+    $parser.data[:no_color]     = false
+    super('all', takes_commands: false)
+    short_desc('List all services on all managers')
+    options.on('-q', '--quiet',    'Hide runtime')        { $parser.data[:show_runtime] = false }
+    options.on('-n', '--no-color', 'Disable color output') { $parser.data[:no_color]     = true }
+  end
+
+  def execute
+    require 'net/ssh'
+    if $parser.data[:no_color]
+      red = green = yellow = blue = reset = blink = ''
+    else
+      red, green, yellow, blue, reset, blink = RED, GREEN, YELLOW, BLUE, RESET, BLINK
+    end
+
+    utils = Utils.instance
+    node = utils.get_node(Socket.gethostname.split('.').first)
+    @cached_cluster     = node['redborder']['managers_per_services']
+    @cached_translation = node['redborder']['systemdservices']
+
+    services = @cached_cluster.keys.sort.flat_map { |k| @cached_translation.fetch(k, []) }.uniq
+    external_services = JSON.parse(File.read('/var/chef/data/data_bag/rBglobal/external_services.json')) rescue {}
+    hosts = `serf members`.lines.map { |l| l.split.first if l.split[2] == 'alive' }.compact
+    return warn('No live managers found') if hosts.empty?
+
+    running = stopped = external = errors = 0
+
+    services_esc = services.map { |s| Shellwords.escape(s) }.join(' ')
+    show_rt      = $parser.data[:show_runtime] ? '1' : '0'
+    remote = <<~BASH
+      services=(#{services_esc})
+      for s in "${services[@]}"; do
+        st=$(systemctl is-active "$s" 2>/dev/null || echo unknown)
+        rt="N/A"
+        if [ "$st" = "active" ] && [ "#{show_rt}" = "1" ]; then
+          rt=$(systemctl status "$s" | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}')
+        fi
+        echo "$s|$st|$rt"
+      done
+    BASH
+
+    host_data = {}
+    hosts.each do |host|
+      Net::SSH.start(host, 'root',
+                     keys: ["/var/www/rb-rails/config/rsa"],
+                     non_interactive: true,
+                     timeout: 5,
+                     verify_host_key: :never) do |ssh|
+        out = ssh.exec!(remote)
+        host_data[host] = out.lines.each_with_object({}) do |l, h|
+          svc, st, rt = l.chomp.split('|', 3)
+          h[svc] = [st, rt]
+        end
+      end
+    end
+
+    width = 30 + 35 * hosts.size
+    puts '-' * width
+    printf "%-30s", 'Service'
+    hosts.each { |h| printf "%-35s", h }
+    puts
+    puts '-' * width
+
+    host_totals = Array.new(hosts.size, 0)
+
+    services.each do |svc|
+      printf "%-30s", "#{svc}:"
+      hosts.each_with_index do |host, idx|
+        raw_st, rt = host_data[host][svc] || ['unknown', 'N/A']
+        st = case raw_st
+             when 'active'   then 'running'
+             when 'inactive' then 'not running'
+             when 'failed'   then 'not running!!'
+             else raw_st
+             end
+
+        if (external_services.include?(svc) && external_services[svc] == 'external') ||
+           (svc == 'minio' && external_services['s3'] == 'external')
+          st = 'external'
+        end
+
+        if %w[running not running not running!! external].include?(st)
+          host_totals[idx] += 1
+        end
+
+        case st
+        when 'running'       then running += 1
+        when 'not running'   then stopped += 1
+        when 'external'      then external += 1
+        when 'not running!!' then errors += 1
+        end
+
+        cell_text = $parser.data[:show_runtime] ? "#{st} #{rt}" : st
+        padded = cell_text.ljust(35)
+        color = case st
+                when 'running'       then green
+                when 'not running'   then yellow
+                when 'not running!!' then red
+                else                    red
+                end
+
+        if $parser.data[:show_runtime] && rt =~ /^\d+\s*s/
+          pre, post = padded.split(rt, 2)
+          cell = pre + blink + rt + reset + post
+          cell = cell.sub(st, "#{color}#{st}#{reset}")
+        else
+          cell = "#{color}#{padded}#{reset}"
+        end
+        print cell
+      end
+      puts
+    end
+
+    puts '-' * width
+    printf "%-30s", 'Total:'
+    host_totals.each do |count|
+      printf "%-35s", count
+    end
+    puts
+    puts '-' * width
+    printf("Running: %d  /  Stopped: %d  /  External: %d  /  Errors: %d\n", running, stopped, external, errors)
   end
 end
 
