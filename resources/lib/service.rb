@@ -185,6 +185,7 @@ class ServiceListCmd < CmdParse::Command
     stopped = 0
     external = 0
     errors = 0
+    total_memory = 0
 
     # Paint service list
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
@@ -212,6 +213,7 @@ class ServiceListCmd < CmdParse::Command
 
         runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
         memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+        total_memory += memory_used.to_f
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           # Blink when runtime is less than a minute
@@ -288,7 +290,13 @@ class ServiceListCmd < CmdParse::Command
     else
       printf("-----------------------------------------------------------------\n")
     end
-    printf("%-33s %-10s\n","Total:", services.count)
+
+    if $parser.data[:show_memory]
+      printf("%-33s %-10s %-30\n","Total:", services.count, total_memory)
+    else
+      printf("%-33s %-10s\n","Total:", services.count)
+    end
+
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
       printf("------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
