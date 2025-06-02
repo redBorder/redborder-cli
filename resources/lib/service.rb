@@ -299,9 +299,9 @@ class ServiceListCmd < CmdParse::Command
         unit = 0
         while total_memory > 1024 && unit < units.size - 1
           total_memory /= 1024
-          i += 1
+          unit += 1
         end
-        total_memory_formatted = format('%.2f%s', total_memory, units[i])
+        total_memory_formatted = format('%.2f%s', total_memory, units[unit])
       end
 
       printf("%-33s %-10s %-30\n","Total:", services.count, total_memory_formatted)
