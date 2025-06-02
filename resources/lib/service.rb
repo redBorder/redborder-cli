@@ -213,7 +213,7 @@ class ServiceListCmd < CmdParse::Command
 
         runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
         memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
-        total_memory += memory_used.to_f
+        total_memory += parse_memory_to_bytes(memory_used)
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           # Blink when runtime is less than a minute
@@ -292,7 +292,19 @@ class ServiceListCmd < CmdParse::Command
     end
 
     if $parser.data[:show_memory]
-      printf("%-33s %-10s %-30\n","Total:", services.count, total_memory)
+      units = ['B', 'K', 'M', 'G', 'T', 'P']
+      if total_memory.zero?
+        total_memory_formatted = '0B'
+      else
+        unit = 0
+        while total_memory > 1024 && unit < units.size - 1
+          total_memory /= 1024
+          i += 1
+        end
+        total_memory_formatted = format('%.2f%s', total_memory, units[i])
+      end
+
+      printf("%-33s %-10s %-30\n","Total:", services.count, total_memory_formatted)
     else
       printf("%-33s %-10s\n","Total:", services.count)
     end
@@ -305,6 +317,29 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
     printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
+  end
+
+  def parse_memory_to_bytes(memory_str)
+    return 0 if memory_str.nil? || memory_str.strip.empty?
+
+    if memory_str =~ /([\d.]+)\s*([BKMGTP]?)/i
+      value = $1.to_f
+      unit  = $2.upcase
+
+      multiplier = case unit
+                   when '', 'B' then 1
+                   when 'K' then 1024
+                   when 'M' then 1024**2
+                   when 'G' then 1024**3
+                   when 'T' then 1024**4
+                   when 'P' then 1024**5
+                   else 1
+                   end
+
+      (value * multiplier).to_i
+    else
+      0
+    end
   end
 end
 
