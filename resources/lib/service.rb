@@ -188,9 +188,9 @@ class ServiceListCmd < CmdParse::Command
 
     # Paint service list
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("================================= Services ==================================\n")
-      printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
-      printf("-----------------------------------------------------------------------------\n")
+      printf("================================= Services ===========================================\n")
+      printf("%-33s %-33s %-10s %-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
+      printf("--------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime]
       printf("================================= Services ==================================\n")
       printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Runtime")
@@ -216,9 +216,9 @@ class ServiceListCmd < CmdParse::Command
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           # Blink when runtime is less than a minute
           if runtime.match?(/^\d+\s*s/)
-            printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime, memory_used)
+            printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
           else
-            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+            printf("%-33s #{green}%-33s#{reset}%-10s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
           end
         elsif $parser.data[:show_runtime]
           # Blink when runtime is less than a minute
@@ -236,7 +236,7 @@ class ServiceListCmd < CmdParse::Command
         ret = "not running"
         stopped = stopped + 1
         runtime = "N/A"
-        memory_used = "0%"
+        memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
@@ -252,7 +252,7 @@ class ServiceListCmd < CmdParse::Command
         ret = "external"
         external = external + 1
         runtime = "N/A"
-        memory_used = "0%"
+        memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
@@ -267,7 +267,7 @@ class ServiceListCmd < CmdParse::Command
         ret = "not running!!"
         errors = errors + 1
         runtime = "N/A"
-        memory_used = "0%"
+        memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
           printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
@@ -281,13 +281,13 @@ class ServiceListCmd < CmdParse::Command
       end
     end
 
-    if $parser.data[:show_runtime]
+    if $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("-----------------------------------------------------------------------------\n")
     else
       printf("-----------------------------------------------------------------\n")
     end
     printf("%-33s %-10s\n","Total:", services.count)
-    if $parser.data[:show_runtime]
+    if $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("-----------------------------------------------------------------------------\n")
     else
       printf("-----------------------------------------------------------------\n")
