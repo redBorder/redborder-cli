@@ -291,20 +291,23 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
 
-    if $parser.data[:show_memory]
-      units = ['B', 'K', 'M', 'G', 'T', 'P']
-      if total_memory.zero?
-        total_memory_formatted = '0B'
-      else
-        unit = 0
-        while total_memory > 1024 && unit < units.size - 1
-          total_memory /= 1024
-          unit += 1
-        end
-        total_memory_formatted = format('%.2f%s', total_memory, units[unit])
+    units = ['B', 'K', 'M', 'G', 'T', 'P']
+    if total_memory.zero?
+      total_memory_formatted = '0B'
+    else
+      total_memory = total_memory.to_f
+      unit = 0
+      while total_memory > 1024 && unit < units.size - 1
+        total_memory /= 1024
+        unit += 1
       end
+      total_memory_formatted = Kernel.format('%.2f%s', total_memory, units[unit])
+    end
 
-      printf("%-33s %-10s %-30\n","Total:", services.count, total_memory_formatted)
+    if $parser.data[:show_memory] && $parser.data[:show_runtime]
+      printf("%-33s %-10s %49s\n","Total:", services.count, total_memory_formatted)
+    elsif $parser.data[:show_memory]
+      printf("%-33s %-10s %28s\n","Total:", services.count, total_memory_formatted)
     else
       printf("%-33s %-10s\n","Total:", services.count)
     end
