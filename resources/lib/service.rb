@@ -153,10 +153,14 @@ class ServiceListCmd < CmdParse::Command
 
   def initialize
     $parser.data[:show_runtime] = true
+    $parser.data[:show_memory] = true
     $parser.data[:no_color] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
-    options.on('-q', '--quiet', 'Show list without runtime') { $parser.data[:show_runtime] = false }
+    options.on('-q', '--quiet', 'Show list without runtime or memory') {
+      $parser.data[:show_runtime] = false
+      $parser.data[:show_memory] = false
+    }
     options.on('-n', '--no-color', 'Print without colors') { $parser.data[:no_color] = true }
   end
 
@@ -184,11 +188,20 @@ class ServiceListCmd < CmdParse::Command
     stopped = 0
     external = 0
     errors = 0
+    total_memory = 0
 
     # Paint service list
-    if $parser.data[:show_runtime]
+    if $parser.data[:show_runtime] && $parser.data[:show_memory]
+      printf("=========================================== Services ===========================================\n")
+      printf("%-33s %-33s %-20s%-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
+      printf("------------------------------------------------------------------------------------------------\n")
+    elsif $parser.data[:show_runtime]
       printf("================================= Services ==================================\n")
       printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Runtime")
+      printf("-----------------------------------------------------------------------------\n")
+    elsif $parser.data[:show_memory]
+      printf("================================= Services ==================================\n")
+      printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Memory")
       printf("-----------------------------------------------------------------------------\n")
     else
       printf("=========================== Services ============================\n")
@@ -201,15 +214,26 @@ class ServiceListCmd < CmdParse::Command
         ret = "running"
         running = running + 1
 
-        if $parser.data[:show_runtime]
-          runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+        runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+        memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+        total_memory += parse_memory_to_bytes(memory_used)
 
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          # Blink when runtime is less than a minute
+          if runtime.match?(/^\d+\s*s/)
+            printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          else
+            printf("%-33s #{green}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          end
+        elsif $parser.data[:show_runtime]
           # Blink when runtime is less than a minute
           if runtime.match?(/^\d+\s*s/)
             printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
           else
             printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
           end
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
         else
           printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
@@ -217,8 +241,14 @@ class ServiceListCmd < CmdParse::Command
         ret = "not running"
         stopped = stopped + 1
         runtime = "N/A"
-        if $parser.data[:show_runtime]
+        memory_used = "0B"
+
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          printf("%-33s #{yellow}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+        elsif $parser.data[:show_runtime]
           printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
         else
           printf("%-33s #{yellow}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
@@ -227,8 +257,14 @@ class ServiceListCmd < CmdParse::Command
         ret = "external"
         external = external + 1
         runtime = "N/A"
-        if $parser.data[:show_runtime]
+        memory_used = "0B"
+
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          printf("%-33s #{blue}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+        elsif $parser.data[:show_runtime]
           printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
         else
           printf("%-33s #{blue}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
@@ -236,26 +272,80 @@ class ServiceListCmd < CmdParse::Command
         ret = "not running!!"
         errors = errors + 1
         runtime = "N/A"
-        if $parser.data[:show_runtime]
+        memory_used = "0B"
+
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          printf("%-33s #{red}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+        elsif $parser.data[:show_runtime]
           printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
         else
           printf("%-33s #{red}%-10s#{reset}\n", "#{systemd_service}:", ret)
         end
       end
     end
 
-    if $parser.data[:show_runtime]
+    if $parser.data[:show_runtime] && $parser.data[:show_memory]
+      printf("------------------------------------------------------------------------------------------------\n")
+    elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("-----------------------------------------------------------------------------\n")
     else
       printf("-----------------------------------------------------------------\n")
     end
-    printf("%-33s %-10s\n","Total:", services.count)
-    if $parser.data[:show_runtime]
+
+    units = ['B', 'K', 'M', 'G', 'T', 'P']
+    if total_memory.zero?
+      total_memory_formatted = '0B'
+    else
+      total_memory = total_memory.to_f
+      unit = 0
+      while total_memory > 1024 && unit < units.size - 1
+        total_memory /= 1024
+        unit += 1
+      end
+      total_memory_formatted = Kernel.format('%.2f%s', total_memory, units[unit])
+    end
+
+    if $parser.data[:show_memory] && $parser.data[:show_runtime]
+      printf("%-33s %-10s %49s\n","Total:", services.count, total_memory_formatted)
+    elsif $parser.data[:show_memory]
+      printf("%-33s %-10s %28s\n","Total:", services.count, total_memory_formatted)
+    else
+      printf("%-33s %-10s\n","Total:", services.count)
+    end
+
+    if $parser.data[:show_runtime] && $parser.data[:show_memory]
+      printf("------------------------------------------------------------------------------------------------\n")
+    elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("-----------------------------------------------------------------------------\n")
     else
       printf("-----------------------------------------------------------------\n")
     end
     printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
+  end
+
+  def parse_memory_to_bytes(memory_str)
+    return 0 if memory_str.nil? || memory_str.strip.empty?
+
+    if memory_str =~ /([\d.]+)\s*([BKMGTP]?)/i
+      value = $1.to_f
+      unit  = $2.upcase
+
+      multiplier = case unit
+                   when '', 'B' then 1
+                   when 'K' then 1024
+                   when 'M' then 1024**2
+                   when 'G' then 1024**3
+                   when 'T' then 1024**4
+                   when 'P' then 1024**5
+                   else 1
+                   end
+
+      (value * multiplier).to_i
+    else
+      0
+    end
   end
 end
 
