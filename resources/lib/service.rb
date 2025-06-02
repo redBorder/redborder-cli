@@ -153,12 +153,15 @@ class ServiceListCmd < CmdParse::Command
 
   def initialize
     $parser.data[:show_runtime] = true
+    $parser.data[:show_memory] = true
     $parser.data[:no_color] = false
     super('list', takes_commands: false)
     short_desc('List services from node')
-    options.on('-q', '--quiet', 'Show list without runtime') { $parser.data[:show_runtime] = false }
+    options.on('-q', '--quiet', 'Show list without runtime or memory') {
+      $parser.data[:show_runtime] = false
+      $parser.data[:show_memory] = false
+    }
     options.on('-n', '--no-color', 'Print without colors') { $parser.data[:no_color] = true }
-    options.on('-m', '--memory', 'Show memory used') { $parser.data[:show_memory] = true }
   end
 
   def execute()
