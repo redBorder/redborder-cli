@@ -239,7 +239,7 @@ class ServiceListCmd < CmdParse::Command
         memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          printf("%-33s #{yellow}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
         elsif $parser.data[:show_runtime]
           printf("%-33s #{yellow}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         elsif $parser.data[:show_memory]
@@ -255,7 +255,7 @@ class ServiceListCmd < CmdParse::Command
         memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          printf("%-33s #{blue}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
         elsif $parser.data[:show_runtime]
           printf("%-33s #{blue}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         elsif $parser.data[:show_memory]
@@ -270,7 +270,7 @@ class ServiceListCmd < CmdParse::Command
         memory_used = "0B"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          printf("%-33s #{red}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
         elsif $parser.data[:show_runtime]
           printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
         elsif $parser.data[:show_memory]
