@@ -189,7 +189,7 @@ class ServiceListCmd < CmdParse::Command
     # Paint service list
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
       printf("=========================================== Services ===========================================\n")
-      printf("%-33s %-33s %-20s %-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
+      printf("%-33s %-33s %-20s%-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
       printf("------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime]
       printf("================================= Services ==================================\n")
