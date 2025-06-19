@@ -63,7 +63,7 @@ class ServiceAllCmd < CmdParse::Command
     host_data = {}
     hosts.each do |host|
       Net::SSH.start(host, 'root',
-                     keys: ["/var/www/rb-rails/config/rsa"],
+                     keys: ["/root/.ssh/rsa"],
                      non_interactive: true,
                      timeout: 5,
                      verify_host_key: :never) do |ssh|
