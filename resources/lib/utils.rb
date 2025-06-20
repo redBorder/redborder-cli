@@ -13,12 +13,12 @@ class Utils
   end
 
   def remote_cmd(node, *cmd)
-    ret = system("ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /var/www/rb-rails/config/rsa root@#{node} " + cmd.join(' '))
+    ret = system("ssh -o ConnectTimeout=5 -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no -o StrictHostKeyChecking=no -i /root/.ssh/rsa root@#{node} " + cmd.join(' '))
   end
 
   def remote_copy(node, path)
     target = Pathname.new(path).parent.to_s
-    ret = system("scp -r -i /var/www/rb-rails/config/rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no #{path} root@#{node}:#{target}")
+    ret = system("scp -r -i /root/.ssh/rsa -o StrictHostKeyChecking=no -o PasswordAuthentication=no #{path} root@#{node}:#{target}")
   end
 
   def get_consul_members
