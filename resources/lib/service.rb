@@ -210,7 +210,93 @@ class ServiceListCmd < CmdParse::Command
     end
 
     services.uniq.sort.each do |systemd_service, enabled|
-      if system("systemctl status #{systemd_service} &>/dev/null")
+      if systemd_service == 'snort3' # Special check for intrusion sensor
+        status_output = `service snort3 status 2>/dev/null`
+        if $?.success?
+          ret = "running"
+          running += 1
+      
+          snort_processes = `ps aux | grep snort | grep -v grep`
+          runtimes = []
+          total_rss_kb = 0
+      
+          snort_processes.each_line do |line|
+            parts = line.split
+            next unless parts.size >= 6
+      
+            rss_kb = parts[5].to_i
+            total_rss_kb += rss_kb
+      
+            pid = parts[1]
+            etime = `ps -p #{pid} -o etime=`.strip
+            if etime =~ /^(\d+)-(\d+):(\d+):/
+              days, hours, mins = $1.to_i, $2.to_i, $3.to_i
+              runtimes << "#{days * 24 + hours}h #{mins}min ago"
+            elsif etime =~ /^(\d+):(\d+):/
+              hours, mins = $1.to_i, $2.to_i
+              runtimes << "#{hours}h #{mins}min ago"
+            elsif etime =~ /^(\d+):(\d+)$/
+              mins = $1.to_i
+              runtimes << "#{mins}min ago"
+            elsif etime =~ /^(\d+)$/
+              secs = $1.to_i
+              runtimes << "#{secs}s ago"
+            else
+              runtimes << etime
+            end
+      
+            end
+      
+          memory_used = if total_rss_kb > 0
+                      kb = total_rss_kb
+                      if kb > 1048576
+                        "#{(kb / 1024.0 / 1024.0).round(2)}G"
+                      elsif kb > 1024
+                        "#{(kb / 1024.0).round(2)}M"
+                      else
+                        "#{kb}K"
+                      end
+                    else
+                      "0B"
+                    end
+      
+      
+          runtime = runtimes.min || "N/A"
+          total_memory += total_rss_kb * 1024  # in bytes
+          if $parser.data[:show_runtime] && $parser.data[:show_memory]
+            if runtime.match?(/^\d+\s*s/)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+            else
+              printf("%-33s #{green}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+            end
+          elsif $parser.data[:show_runtime]
+            if runtime.match?(/^\d+\s*s/)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
+            else
+              printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+            end
+          elsif $parser.data[:show_memory]
+            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
+          else
+            printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
+          end
+        else
+          ret = "not running!!"
+          errors += 1
+          runtime = "N/A"
+          memory_used = "0B"
+      
+          if $parser.data[:show_runtime] && $parser.data[:show_memory]
+            printf("%-33s #{red}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+          elsif $parser.data[:show_runtime]
+            printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+          elsif $parser.data[:show_memory]
+            printf("%-33s #{red}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
+          else
+            printf("%-33s #{red}%-10s#{reset}\n", "#{systemd_service}:", ret)
+          end
+        end
+      elsif system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running = running + 1
 
