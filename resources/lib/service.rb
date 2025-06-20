@@ -41,7 +41,7 @@ class ServiceAllCmd < CmdParse::Command
 
     services = @cached_cluster.keys.sort.flat_map { |k| @cached_translation.fetch(k, []) }.uniq
     external_services = JSON.parse(File.read('/var/chef/data/data_bag/rBglobal/external_services.json')) rescue {}
-    hosts = `serf members`.lines.map { |l| l.split.first if l.split[2] == 'alive' }.compact
+    hosts = `serf members`.lines.map { |l| l.split.first if l.split[2] == 'alive' }.compact.sort
     return warn('No live managers found') if hosts.empty?
 
     running = stopped = external = errors = 0
@@ -52,11 +52,14 @@ class ServiceAllCmd < CmdParse::Command
       services=(#{services_esc})
       for s in "${services[@]}"; do
         st=$(systemctl is-active "$s" 2>/dev/null || echo unknown)
+        st=$(echo "$st" | head -n 1)
+        en=$(systemctl is-enabled "$s" 2>/dev/null || echo disabled)
+        en=$(echo "$en" | head -n 1)
         rt="N/A"
         if [ "$st" = "active" ] && [ "#{show_rt}" = "1" ]; then
           rt=$(systemctl status "$s" | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}')
         fi
-        echo "$s|$st|$rt"
+        printf "%s|%s|%s|%s\n" "$s" "$st" "$en" "$rt"
       done
     BASH
 
@@ -69,8 +72,8 @@ class ServiceAllCmd < CmdParse::Command
                      verify_host_key: :never) do |ssh|
         out = ssh.exec!(remote)
         host_data[host] = out.lines.each_with_object({}) do |l, h|
-          svc, st, rt = l.chomp.split('|', 3)
-          h[svc] = [st, rt]
+          svc, st, en, rt = l.chomp.split('|', 4)
+          h[svc] = [st, en, rt]
         end
       end
     end
@@ -87,13 +90,18 @@ class ServiceAllCmd < CmdParse::Command
     services.each do |svc|
       printf "%-30s", "#{svc}:"
       hosts.each_with_index do |host, idx|
-        raw_st, rt = host_data[host][svc] || ['unknown', 'N/A']
-        st = case raw_st
-             when 'active'   then 'running'
-             when 'inactive' then 'not running'
-             when 'failed'   then 'not running!!'
-             else raw_st
-             end
+        raw_st, raw_en, rt = host_data[host][svc] || ['unknown', 'unknown', 'N/A']
+
+        st = case
+          when raw_st == 'active'
+            'running'
+          when %w[inactive failed].include?(raw_st) && raw_en == 'disabled'
+            'not running'
+          when %w[inactive failed].include?(raw_st) && raw_en == 'enabled'
+            'not running!!'
+          else
+            'unknown'
+          end
 
         if (external_services.include?(svc) && external_services[svc] == 'external') ||
            (svc == 'minio' && external_services['s3'] == 'external')
@@ -111,8 +119,16 @@ class ServiceAllCmd < CmdParse::Command
         when 'not running!!' then errors += 1
         end
 
-        cell_text = $parser.data[:show_runtime] ? "#{st} #{rt}" : st
-        padded = cell_text.ljust(35)
+        status_col_width = 15
+        runtime_col_width = 18
+
+        rt_str = rt.strip
+        rt_str = "N/A" if rt_str.empty?
+
+        padded_status = st.ljust(status_col_width)
+        padded_runtime = rt_str.rjust(runtime_col_width)
+        padded = padded_status + padded_runtime
+
         color = case st
                 when 'running'       then green
                 when 'not running'   then yellow
@@ -127,7 +143,8 @@ class ServiceAllCmd < CmdParse::Command
         else
           cell = "#{color}#{padded}#{reset}"
         end
-        print cell
+
+        print cell + "  "
       end
       puts
     end
@@ -215,18 +232,18 @@ class ServiceListCmd < CmdParse::Command
         if $?.success?
           ret = "running"
           running += 1
-      
+
           snort_processes = `ps aux | grep snort | grep -v grep`
           runtimes = []
           total_rss_kb = 0
-      
+
           snort_processes.each_line do |line|
             parts = line.split
             next unless parts.size >= 6
-      
+
             rss_kb = parts[5].to_i
             total_rss_kb += rss_kb
-      
+
             pid = parts[1]
             etime = `ps -p #{pid} -o etime=`.strip
             if etime =~ /^(\d+)-(\d+):(\d+):/
@@ -244,9 +261,9 @@ class ServiceListCmd < CmdParse::Command
             else
               runtimes << etime
             end
-      
+
             end
-      
+
           memory_used = if total_rss_kb > 0
                       kb = total_rss_kb
                       if kb > 1048576
@@ -259,8 +276,7 @@ class ServiceListCmd < CmdParse::Command
                     else
                       "0B"
                     end
-      
-      
+
           runtime = runtimes.min || "N/A"
           total_memory += total_rss_kb * 1024  # in bytes
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
@@ -285,7 +301,7 @@ class ServiceListCmd < CmdParse::Command
           errors += 1
           runtime = "N/A"
           memory_used = "0B"
-      
+
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
             printf("%-33s #{red}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
           elsif $parser.data[:show_runtime]
