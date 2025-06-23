@@ -120,7 +120,7 @@ class ServiceAllCmd < CmdParse::Command
         end
 
         status_col_width = 15
-        runtime_col_width = 18
+        runtime_col_width = 19
 
         rt_str = rt.strip
         rt_str = "N/A" if rt_str.empty?
