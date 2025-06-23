@@ -119,15 +119,15 @@ class ServiceAllCmd < CmdParse::Command
         when 'not running!!' then errors += 1
         end
 
-        status_col_width = 15
-        runtime_col_width = 19
+        host_col_width     = 35
+        status_col_width   = 14
+        runtime_col_width  = host_col_width - status_col_width - 1
 
         rt_str = rt.strip
         rt_str = "N/A" if rt_str.empty?
 
-        padded_status = st.ljust(status_col_width)
-        padded_runtime = rt_str.rjust(runtime_col_width)
-        padded = padded_status + padded_runtime
+        status_str = st.ljust(status_col_width)
+        runtime_str = rt_str.rjust(runtime_col_width)
 
         color = case st
                 when 'running'       then green
@@ -137,14 +137,13 @@ class ServiceAllCmd < CmdParse::Command
                 end
 
         if $parser.data[:show_runtime] && rt =~ /^\d+\s*s/
-          pre, post = padded.split(rt, 2)
-          cell = pre + blink + rt + reset + post
-          cell = cell.sub(st, "#{color}#{st}#{reset}")
+          runtime_str = "#{blink}#{runtime_str}#{reset}"
         else
-          cell = "#{color}#{padded}#{reset}"
+          runtime_str = "#{color}#{runtime_str}#{reset}"
         end
+        status_str = "#{color}#{status_str}#{reset}"
 
-        print cell + "  "
+        print status_str + runtime_str + "|"
       end
       puts
     end
