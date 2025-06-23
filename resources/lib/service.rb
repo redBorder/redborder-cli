@@ -236,14 +236,14 @@ class ServiceListCmd < CmdParse::Command
           snort_processes = `ps aux | grep snort | grep -v grep`
           runtimes = []
           total_rss_kb = 0
-
+      
           snort_processes.each_line do |line|
             parts = line.split
             next unless parts.size >= 6
-
+      
             rss_kb = parts[5].to_i
             total_rss_kb += rss_kb
-
+      
             pid = parts[1]
             etime = `ps -p #{pid} -o etime=`.strip
             if etime =~ /^(\d+)-(\d+):(\d+):/
@@ -261,9 +261,6 @@ class ServiceListCmd < CmdParse::Command
             else
               runtimes << etime
             end
-
-            end
-
           memory_used = if total_rss_kb > 0
                       kb = total_rss_kb
                       if kb > 1048576
@@ -276,7 +273,6 @@ class ServiceListCmd < CmdParse::Command
                     else
                       "0B"
                     end
-
           runtime = runtimes.min || "N/A"
           total_memory += total_rss_kb * 1024  # in bytes
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
@@ -301,7 +297,6 @@ class ServiceListCmd < CmdParse::Command
           errors += 1
           runtime = "N/A"
           memory_used = "0B"
-
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
             printf("%-33s #{red}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
           elsif $parser.data[:show_runtime]
