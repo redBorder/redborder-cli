@@ -261,6 +261,7 @@ class ServiceListCmd < CmdParse::Command
             else
               runtimes << etime
             end
+          end
           memory_used = if total_rss_kb > 0
                       kb = total_rss_kb
                       if kb > 1048576
