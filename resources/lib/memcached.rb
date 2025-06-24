@@ -234,7 +234,7 @@ class MemcachedGetValueCmd < CmdParse::Command
       separator
 
       list_of_keys.each do |k|
-        value = @memcached.get("#{k}")
+        value = @memcached.get("#{k}") rescue "Warning: Unable to display value"
         printf("%-43s %50s", "#{k}", value.to_s)
         printf("\n")
         separator if k!=list_of_keys.last
