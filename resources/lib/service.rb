@@ -420,6 +420,13 @@ class ServiceListCmd < CmdParse::Command
       printf("-----------------------------------------------------------------\n")
     end
     printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
+    manager_node = utils.get_node(node_name)
+    if manager_node
+      printf("#{node_name} runtime: #{manager_node['uptime']}\n")
+      printf("#{node_name} start time: #{Time.now - manager_node['uptime_seconds']}\n\n")
+    else
+      printf("Error getting manager node\n\n")
+    end
   end
 
   def parse_memory_to_bytes(memory_str)
