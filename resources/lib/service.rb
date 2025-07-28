@@ -543,7 +543,8 @@ class ServiceDisableCmd < CmdParse::Command
     nodes = []
     utils = Utils.instance
     saved = false
-
+    protected_services = ['s3', 'redis'] # Mandatory services that cannot be disabled if only one node is running
+    
     begin
       nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
       if nodes.count == 0
@@ -559,22 +560,24 @@ class ServiceDisableCmd < CmdParse::Command
       end
     end
 
-    if service == 's3'
+    if protected_services.include?(service)
       total_enabled_nodes = 0
       utils.check_nodes("all").each do |n|
         n_node = utils.get_node(n)
         next unless n_node
         role = Chef::Role.load(n)
-        if role.override_attributes.dig('redborder','services','s3').nil?
-          s3_role = n_node['redborder']['services']['s3']
-        else
-          s3_role = role.override_attributes["redborder"]["services"]["s3"]
-        end
-        total_enabled_nodes += 1 if s3_role
+        
+        service_role = if role.override_attributes.dig('redborder','services',service).nil?
+                        n_node['redborder']['services'][service]
+                      else
+                        role.override_attributes["redborder"]["services"][service]
+                      end
+        
+        total_enabled_nodes += 1 if service_role
       end
 
       if total_enabled_nodes <= 1
-        puts "ERROR: Service 's3' is enabled on only one node. Cannot disable it."
+        puts "ERROR: Service '#{service}' is enabled on only one node. Cannot disable it."
         return
       end
     end
