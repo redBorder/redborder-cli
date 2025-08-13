@@ -208,17 +208,17 @@ class ServiceListCmd < CmdParse::Command
 
     # Paint service list
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("=========================================== Services ===========================================\n")
-      printf("%-33s %-33s %-20s%-10s\n", "Service", "Status(#{node_name})", "Runtime", "Memory")
-      printf("------------------------------------------------------------------------------------------------\n")
+      printf("=========================================== Services =====================================================\n")
+      printf("%-33s %-33s %-15s %-10s %-33s\n", "Service", "Status(#{node_name})", "Runtime", "Memory", "Cgroup")
+      printf("----------------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime]
-      printf("================================= Services ==================================\n")
-      printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Runtime")
-      printf("-----------------------------------------------------------------------------\n")
+      printf("================================= Services =========================================\n")
+      printf("%-33s %-33s %-10s %-33s\n", "Service", "Status(#{node_name})", "Runtime", "Cgroup")
+      printf("------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_memory]
-      printf("================================= Services ==================================\n")
-      printf("%-33s %-33s %-10s\n", "Service", "Status(#{node_name})", "Memory")
-      printf("-----------------------------------------------------------------------------\n")
+      printf("================================= Services ========================================\n")
+      printf("%-33s %-33s %-10s %-33s\n", "Service", "Status(#{node_name})", "Memory", "Cgroup")
+      printf("-----------------------------------------------------------------------------------\n")
     else
       printf("=========================== Services ============================\n")
       printf("%-33s %-10s\n", "Service", "Status(#{node_name})")
@@ -235,6 +235,8 @@ class ServiceListCmd < CmdParse::Command
           snort_processes = `ps aux | grep snort | grep -v grep`
           runtimes = []
           total_rss_kb = 0
+
+          cgroup = get_cgroup(systemd_service) || "N/A"
       
           snort_processes.each_line do |line|
             parts = line.split
@@ -277,18 +279,18 @@ class ServiceListCmd < CmdParse::Command
           total_memory += total_rss_kb * 1024  # in bytes
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
             if runtime.match?(/^\d+\s*s/)
-              printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s %-20s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
             else
-              printf("%-33s #{green}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+              printf("%-33s #{green}%-33s#{reset}%-20s %-10s %-20s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
             end
           elsif $parser.data[:show_runtime]
             if runtime.match?(/^\d+\s*s/)
-              printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset} %-20s\n", "#{systemd_service}:", ret, runtime, cgroup)
             else
-              printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+              printf("%-33s #{green}%-33s#{reset}%-10s %-20s\n", "#{systemd_service}:", ret, runtime, cgrou)
             end
           elsif $parser.data[:show_memory]
-            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
+            printf("%-33s #{green}%-33s#{reset}%-10s %-20s\n", "#{systemd_service}:", ret, memory_used, cgroup)
           else
             printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
           end
@@ -315,24 +317,31 @@ class ServiceListCmd < CmdParse::Command
         memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
         total_memory += parse_memory_to_bytes(memory_used)
 
+        cgroup = get_cgroup(systemd_service) || "N/A"
+
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          # Blink when runtime is less than a minute
+          # Blink cuando runtime < 1 minuto
           if runtime.match?(/^\d+\s*s/)
-            printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+            printf("%-33s #{green}%-33s#{reset} %-15s %-10s %-25s\n",
+                  "#{systemd_service}:", ret, runtime, memory_used, cgroup)
           else
-            printf("%-33s #{green}%-33s#{reset}%-20s %-10s\n", "#{systemd_service}:", ret, runtime, memory_used)
+            printf("%-33s #{green}%-33s#{reset} %-15s %-10s %-25s\n",
+                  "#{systemd_service}:", ret, runtime, memory_used, cgroup)
           end
         elsif $parser.data[:show_runtime]
-          # Blink when runtime is less than a minute
           if runtime.match?(/^\d+\s*s/)
-            printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset}\n", "#{systemd_service}:", ret, runtime)
+            printf("%-33s #{green}%-33s#{reset} #{blink}%-10s#{reset} %-25s\n",
+                  "#{systemd_service}:", ret, runtime, cgroup)
           else
-            printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, runtime)
+            printf("%-33s #{green}%-33s#{reset} %-10s %-25s\n",
+                  "#{systemd_service}:", ret, runtime, cgroup)
           end
         elsif $parser.data[:show_memory]
-          printf("%-33s #{green}%-33s#{reset}%-10s\n", "#{systemd_service}:", ret, memory_used)
+          printf("%-33s #{green}%-33s#{reset} %-10s %-25s\n",
+                "#{systemd_service}:", ret, memory_used, cgroup)
         else
-          printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
+          printf("%-33s #{green}%-10s#{reset} %-25s\n",
+                "#{systemd_service}:", ret, cgroup)
         end
       elsif !enabled
         ret = "not running"
@@ -413,12 +422,12 @@ class ServiceListCmd < CmdParse::Command
     end
 
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("------------------------------------------------------------------------------------------------\n")
+      printf("----------------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
-      printf("-----------------------------------------------------------------------------\n")
+      printf("------------------------------------------------------------------------------------\n")
     else
       printf("-----------------------------------------------------------------\n")
-    end
+    end 
     printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
     manager_node = utils.get_node(node_name)
     if manager_node
@@ -450,6 +459,17 @@ class ServiceListCmd < CmdParse::Command
     else
       0
     end
+  end
+
+  # Return cgroup path for a systemd unit, or nil if unknown
+  def get_cgroup(unit)
+    unit = unit.include?('.') ? unit : "#{unit}.service"
+    cg = `systemctl show #{unit} -p ControlGroup --value 2>/dev/null`.strip
+    return "N/A" if cg.empty?
+    # Dividimos la ruta y devolvemos solo el slice
+    parts = cg.split('/')
+    slice = parts.find { |p| p.end_with?('.slice') }
+    slice || "N/A"
   end
 end
 
