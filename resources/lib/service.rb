@@ -320,7 +320,7 @@ class ServiceListCmd < CmdParse::Command
         cgroup = get_cgroup(systemd_service) || "N/A"
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          # Blink cuando runtime < 1 minuto
+          # Blink when runtime is less than a minute
           if runtime.match?(/^\d+\s*s/)
             printf("%-33s #{green}%-33s#{reset} %-15s %-10s %-25s\n",
                   "#{systemd_service}:", ret, runtime, memory_used, cgroup)
@@ -329,6 +329,7 @@ class ServiceListCmd < CmdParse::Command
                   "#{systemd_service}:", ret, runtime, memory_used, cgroup)
           end
         elsif $parser.data[:show_runtime]
+          # Blink when runtime is less than a minute
           if runtime.match?(/^\d+\s*s/)
             printf("%-33s #{green}%-33s#{reset} #{blink}%-10s#{reset} %-25s\n",
                   "#{systemd_service}:", ret, runtime, cgroup)
