@@ -467,7 +467,7 @@ class ServiceListCmd < CmdParse::Command
     unit = unit.include?('.') ? unit : "#{unit}.service"
     cg = `systemctl show #{unit} -p ControlGroup --value 2>/dev/null`.strip
     return "N/A" if cg.empty?
-    # Dividimos la ruta y devolvemos solo el slice
+    # Extract the slice from the cgroup path
     parts = cg.split('/')
     slice = parts.find { |p| p.end_with?('.slice') }
     slice || "N/A"
