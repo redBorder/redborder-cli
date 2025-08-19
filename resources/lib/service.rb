@@ -331,6 +331,7 @@ class ServiceListCmd < CmdParse::Command
 
         runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
         memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+        memory_used = memory_used = '0B' if memory_used.to_s.empty?
         total_memory += parse_memory_to_bytes(memory_used)
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
