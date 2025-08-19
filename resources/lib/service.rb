@@ -279,18 +279,18 @@ class ServiceListCmd < CmdParse::Command
           total_memory += total_rss_kb * 1024  # in bytes
           if $parser.data[:show_runtime] && $parser.data[:show_memory]
             if runtime.match?(/^\d+\s*s/)
-              printf("%-33s #{green}%-33s#{reset}#{blink}%-20s#{reset} %-10s %-20s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-15s#{reset} %-10s %-25s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
             else
-              printf("%-33s #{green}%-33s#{reset}%-20s %-10s %-20s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
+              printf("%-33s #{green}%-33s#{reset} %-15s %-10s %-25s\n", "#{systemd_service}:", ret, runtime, memory_used, cgroup)
             end
           elsif $parser.data[:show_runtime]
             if runtime.match?(/^\d+\s*s/)
-              printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset} %-20s\n", "#{systemd_service}:", ret, runtime, cgroup)
+              printf("%-33s #{green}%-33s#{reset}#{blink}%-10s#{reset} %-25s\n", "#{systemd_service}:", ret, runtime, cgroup)
             else
-              printf("%-33s #{green}%-33s#{reset}%-10s %-20s\n", "#{systemd_service}:", ret, runtime, cgrou)
+              printf("%-33s #{green}%-33s#{reset} %-10s %-25s\n", "#{systemd_service}:", ret, runtime, cgrou)
             end
           elsif $parser.data[:show_memory]
-            printf("%-33s #{green}%-33s#{reset}%-10s %-20s\n", "#{systemd_service}:", ret, memory_used, cgroup)
+            printf("%-33s #{green}%-33s#{reset} %-10s %-25s\n", "#{systemd_service}:", ret, memory_used, cgroup)
           else
             printf("%-33s #{green}%-10s#{reset}\n", "#{systemd_service}:", ret)
           end
@@ -464,13 +464,29 @@ class ServiceListCmd < CmdParse::Command
 
   # Return cgroup path for a systemd unit, or nil if unknown
   def get_cgroup(unit)
+    # Normalize unit name
     unit = unit.include?('.') ? unit : "#{unit}.service"
+
+    if unit == "snort3.service"
+      pid = `pgrep -o snort`.strip
+      return "N/A" if pid.empty?
+
+      path = "/proc/#{pid}/cgroup"
+      return "N/A" unless File.exist?(path)
+
+      # Read cgroup file and find the slice
+      cg_lines = File.read(path).split("\n")
+      slices = cg_lines.map { |l| l.split(":").last.split("/") }.flatten.select { |p| p.end_with?(".slice") }
+      slice = slices.last
+      return slice || "N/A"
+    end
+
     cg = `systemctl show #{unit} -p ControlGroup --value 2>/dev/null`.strip
     return "N/A" if cg.empty?
-    # Extract the slice from the cgroup path
+
     parts = cg.split('/')
     slice = parts.find { |p| p.end_with?('.slice') }
-    slice || "N/A"
+    slice || cg || "N/A"
   end
 end
 
