@@ -608,7 +608,7 @@ class ServiceDisableCmd < CmdParse::Command
     nodes = []
     utils = Utils.instance
     saved = false
-    protected_services = ['s3', 'redis'] # Mandatory services that cannot be disabled if only one node is running
+    protected_services = ['s3', 'redis', 'postgresql'] # Mandatory services that cannot be disabled if only one node is running
     
     begin
       nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
