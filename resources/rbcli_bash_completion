@@ -8,38 +8,127 @@ _rbcli()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # Available options
-    opts="help node service"
+    # Available top-level commands
+    opts="check logstash memcached node rails service setup test zookeeper help version"
 
-    # sub-command options
-    node_opts="list"
-    service_opts="list"
-    logstash_opts="list"
+    # Sub-commands
+    check_opts="status list help"
+    logstash_opts="status pipelines pipeline plugins"
+    memcached_opts="status keys values"
+    node_opts="list execute copy"
+    rails_opts="console"
+    service_opts="list enable disable start stop all"
+    setup_opts="wizard"
+    test_opts="sub"
+    zookeeper_opts="status clean"
+
+    # Options for commands and sub-commands
+    memcached_status_opts="--stats -s --display -d"
+    memcached_keys_opts="--invert-match -v"
+    memcached_values_opts="--invert-match -v"
+    node_list_opts="--alphabetically -a --compact -c --extend -x"
+    service_list_opts="--quiet -q --no-color -n"
+    service_all_opts="--quiet -q --no-color -n"
+    test_sub_opts="--example -x"
+    zookeeper_clean_opts="--kafka -k --force -f --consumer -c --druid -d --reassign-partitions -p"
+
 
     if [ "$COMP_CWORD" -eq 1 ]; then #first command
       COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
-    else # sub-command
-      case "${prev}" in
-          help)
-              COMPREPLY=( $(compgen -W ${opts} ${cur}) )
-              return 0
-              ;;
-          node)
-              COMPREPLY=( $(compgen -W "${node_opts}" -- ${cur}) )
-              return 0
-              ;;
-          service)
-              COMPREPLY=( $(compgen -W "${service_opts}" -- ${cur}) )
-              return 0
-              ;;
-          logstash)
-              COMPREPLY=( $(compgen -W "${logstash_opts}" -- ${cur}) )
-              return 0
-              ;;
-          *)
-          ;;
-      esac
+      return 0
     fi
+
+    case "${COMP_WORDS[1]}" in
+        check)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${check_opts}" -- ${cur}) )
+            fi
+            ;;
+        logstash)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${logstash_opts}" -- ${cur}) )
+            fi
+            ;;
+        memcached)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${memcached_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    status)
+                        COMPREPLY=( $(compgen -W "${memcached_status_opts}" -- ${cur}) )
+                        ;;
+                    keys)
+                        COMPREPLY=( $(compgen -W "${memcached_keys_opts}" -- ${cur}) )
+                        ;;
+                    values)
+                        COMPREPLY=( $(compgen -W "${memcached_values_opts}" -- ${cur}) )
+                        ;;
+                esac
+            fi
+            ;;
+        node)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${node_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    list)
+                        COMPREPLY=( $(compgen -W "${node_list_opts}" -- ${cur}) )
+                        ;;
+                esac
+            fi
+            ;;
+        rails)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${rails_opts}" -- ${cur}) )
+            fi
+            ;;
+        service)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${service_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    list)
+                        COMPREPLY=( $(compgen -W "${service_list_opts}" -- ${cur}) )
+                        ;;
+                    all)
+                        COMPREPLY=( $(compgen -W "${service_all_opts}" -- ${cur}) )
+                        ;;
+                esac
+            fi
+            ;;
+        setup)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${setup_opts}" -- ${cur}) )
+            fi
+            ;;
+        test)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${test_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    sub)
+                        COMPREPLY=( $(compgen -W "${test_sub_opts}" -- ${cur}) )
+                        ;;
+                esac
+            fi
+            ;;
+        zookeeper)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "${zookeeper_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    clean)
+                        COMPREPLY=( $(compgen -W "${zookeeper_clean_opts}" -- ${cur}) )
+                        ;;
+                esac
+            fi
+            ;;
+        help)
+            COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+            ;;
+        *)
+        ;;
+    esac
 
 }
 complete -F _rbcli rbcli
