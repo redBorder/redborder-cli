@@ -62,6 +62,8 @@ class NodeExecuteCmd < CmdParse::Command
       cmd.insert(0, node)
       nodes << Socket.gethostname.split(".").first
     end
+    
+    nodes = nodes.sort { |a, b| (a || "zzzzzz") <=> (b || "zzzzzz") } if node == "all"
 
     nodes.each do |n|
       puts "##############################################"
@@ -89,6 +91,8 @@ class NodeCopyCmd < CmdParse::Command
       cmd.insert(0, node)
       nodes << Socket.gethostname.split(".").first
     end
+
+    nodes = nodes.sort { |a, b| (a || "zzzzzz") <=> (b || "zzzzzz") } if node == "all"
 
     nodes.each do |n|
       puts "###############################################"
