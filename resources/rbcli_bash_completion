@@ -23,7 +23,7 @@ _rbcli()
     zookeeper_opts="status clean"
 
     # Options for commands and sub-commands
-    check_specific_opts="-h -s -o -u -k -c -e -q"
+    check_status_opts="-c --colorless -e --extended -q --quiet -s --service -o --output_file -u --upload -k --keep"
     logstash_pipeline_opts="-p --pipeline" 
     memcached_status_opts="--stats -s --display -d"
     memcached_keys_opts="--invert-match -v"
@@ -46,15 +46,14 @@ _rbcli()
     case "${COMP_WORDS[1]}" in
         check)
             if [ "$COMP_CWORD" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "${check_opts} ${check_specific_opts}" -- ${cur}) )
+                COMPREPLY=( $(compgen -W "${check_opts}" -- ${cur}) )
             else
-                # After "check <subcommand>", show options for "status" or nothing for "list/help"
                 case "${COMP_WORDS[2]}" in
                     status)
-                        COMPREPLY=( $(compgen -W "${check_specific_opts}" -- ${cur}) )
+                        COMPREPLY=( $(compgen -W "${check_status_opts}" -- ${cur}) )
                         ;;
                     list|help)
-                        COMPREPLY=( $(compgen -W "" -- ${cur}) )
+                        COMPREPLY=()
                         ;;
                 esac
             fi
