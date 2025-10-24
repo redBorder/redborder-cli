@@ -24,6 +24,7 @@ _rbcli()
 
     # Options for commands and sub-commands
     check_specific_opts="-h -s -o -u -k -c -e -q"
+    logstash_pipeline_opts="-p --pipeline" 
     memcached_status_opts="--stats -s --display -d"
     memcached_keys_opts="--invert-match -v"
     memcached_values_opts="--invert-match -v"
@@ -61,6 +62,12 @@ _rbcli()
         logstash)
             if [ "$COMP_CWORD" -eq 2 ]; then
                 COMPREPLY=( $(compgen -W "${logstash_opts}" -- ${cur}) )
+            else
+                case "${COMP_WORDS[2]}" in
+                    pipeline)
+                        COMPREPLY=( $(compgen -W "${logstash_pipeline_opts}" -- ${cur}) )
+                        ;;
+                esac
             fi
             ;;
         memcached)
