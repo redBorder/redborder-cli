@@ -9,7 +9,7 @@ _rbcli()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Available top-level commands
-    opts="check logstash memcached node rails service setup test zookeeper help version"
+    opts="check logstash memcached node rails service setup zookeeper help version"
 
     # Sub-commands
     check_opts="status list help"
@@ -19,7 +19,7 @@ _rbcli()
     rails_opts="console"
     service_opts="list enable disable start stop all"
     setup_opts="wizard"
-    test_opts="sub"
+#    test_opts="sub"
     zookeeper_opts="status clean"
 
     # Options for commands and sub-commands
@@ -31,7 +31,7 @@ _rbcli()
     node_list_opts="--alphabetically -a --compact -c --extend -x"
     service_list_opts="--quiet -q --no-color -n"
     service_all_opts="--quiet -q --no-color -n"
-    test_sub_opts="--example -x"
+#    test_sub_opts="--example -x"
     zookeeper_clean_opts="--kafka -k --force -f --consumer -c --druid -d --reassign-partitions -p"
 
     # Global options
@@ -122,17 +122,17 @@ _rbcli()
                 COMPREPLY=( $(compgen -W "${setup_opts}" -- ${cur}) )
             fi
             ;;
-        test)
-            if [ "$COMP_CWORD" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "${test_opts}" -- ${cur}) )
-            else
-                case "${COMP_WORDS[2]}" in
-                    sub)
-                        COMPREPLY=( $(compgen -W "${test_sub_opts}" -- ${cur}) )
-                        ;;
-                esac
-            fi
-            ;;
+        # test)
+        #     if [ "$COMP_CWORD" -eq 2 ]; then
+        #         COMPREPLY=( $(compgen -W "${test_opts}" -- ${cur}) )
+        #     else
+        #         case "${COMP_WORDS[2]}" in
+        #             sub)
+        #                 COMPREPLY=( $(compgen -W "${test_sub_opts}" -- ${cur}) )
+        #                 ;;
+        #         esac
+        #     fi
+        #     ;;
         zookeeper)
             if [ "$COMP_CWORD" -eq 2 ]; then
                 COMPREPLY=( $(compgen -W "${zookeeper_opts}" -- ${cur}) )
