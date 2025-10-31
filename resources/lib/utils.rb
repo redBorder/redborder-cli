@@ -78,6 +78,18 @@ class Utils
     logstash_api_query('_node/plugins')
   end
 
+  def postgres_master?
+    pg_data = '/var/lib/pgsql/data'
+    standby_file = File.join(pg_data, 'standby.signal')
+    pg_conf = File.join(pg_data, 'postgresql.conf')
+
+    return false if File.exist?(standby_file) ||
+                    File.read(pg_conf) =~ /primary_conninfo\s*=/ ||
+                    File.read(pg_conf) =~ /promote_trigger_file\s*=/
+
+    true
+  end
+
   #  curl -XGET 'localhost:9600/_node/stats/pipelines/vault-pipeline'
 
   def logstash_api_query(action)
