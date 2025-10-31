@@ -610,7 +610,7 @@ class ServiceDisableCmd < CmdParse::Command
     saved = false
     protected_services = ['s3', 'redis', 'postgresql'] # Mandatory services that cannot be disabled if only one node is running
 
-    if service == 'postgresql' && postgres_master?
+    if service == 'postgresql' && utils.postgres_master?
       puts 'ERROR: Cannot disable PostgreSQL on this node because it is the master.'
       return
     end
@@ -701,20 +701,6 @@ class ServiceDisableCmd < CmdParse::Command
         end
       end
     end
-  end
-
-  private
-
-  def postgres_master?
-    pg_data = '/var/lib/pgsql/data'
-    standby_file = File.join(pg_data, 'standby.signal')
-    pg_conf = File.join(pg_data, 'postgresql.conf')
-
-    return false if File.exist?(standby_file) || 
-                    File.read(pg_conf) =~ /primary_conninfo\s*=/ || 
-                    File.read(pg_conf) =~ /promote_trigger_file\s*=/
-
-    true
   end
 end
 
@@ -807,6 +793,11 @@ class ServiceStopCmd < CmdParse::Command
         services.insert(0, node)
         nodes << Socket.gethostname.split(".").first
       end
+    end
+
+    if services.include?('postgresql') && utils.postgres_master?
+      puts 'ERROR: Cannot disable PostgreSQL on this node because it is the master.'
+      return
     end
 
     nodes.each do |n|
