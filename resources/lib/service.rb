@@ -610,7 +610,10 @@ class ServiceDisableCmd < CmdParse::Command
     saved = false
     protected_services = ['s3', 'redis', 'postgresql'] # Mandatory services that cannot be disabled if only one node is running
 
-    if service == 'postgresql' && utils.postgres_master?
+    if service == 'postgresql' && !Dir.exist?('/var/lib/pgsql/data')
+      puts 'PostgreSQL already disabled.'
+      return
+    elsif service == 'postgresql' && utils.postgres_master?
       puts 'ERROR: Cannot disable PostgreSQL on this node because it is the master.'
       return
     end
@@ -795,8 +798,11 @@ class ServiceStopCmd < CmdParse::Command
       end
     end
 
-    if services.include?('postgresql') && utils.postgres_master?
-      puts 'ERROR: Cannot disable PostgreSQL on this node because it is the master.'
+    if services.include?('postgresql') && !Dir.exist?('/var/lib/pgsql/data')
+      puts 'PostgreSQL already disabled.'
+      return
+    elsif services.include?('postgresql') && utils.postgres_master?
+      puts 'ERROR: Cannot stop PostgreSQL on this node because it is the master.'
       return
     end
 
