@@ -820,6 +820,7 @@ class ServiceStopCmd < CmdParse::Command
           found = false
           systemd_services.each_value do |v|
             if v.include?(service)
+              puts "Trying to stop service #{service} on #{n}.."
               ret = utils.remote_cmd(n, "systemctl stop #{service} &>/dev/null") ? 'stopped' : 'failed to stop'
               puts "#{service} #{ret} on #{n}"
               found = true
@@ -832,6 +833,7 @@ class ServiceStopCmd < CmdParse::Command
           found = false
           systemd_services.each_value do |v|
             if v.include?(service)
+              puts "Trying to stop service #{service} on #{n}.."
               `systemctl stop #{service} &>/dev/null`
               ret = $?.success? ? 'stopped' : 'failed to stop'
               puts "#{service} #{ret} on #{n}"
