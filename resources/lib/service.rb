@@ -459,7 +459,7 @@ class ServiceListCmd < CmdParse::Command
     end 
     printf("Running: #{running}  /  Stopped: #{stopped}  /  External: #{external}  /  Errors: #{errors}\n\n")
     manager_node = utils.get_node(node_name)
-    if manager_node
+    if manager_node && manager_node['uptime_seconds'].is_a?(Numeric)
       printf("#{node_name} runtime: #{manager_node['uptime']}\n")
       printf("#{node_name} start time: #{Time.now - manager_node['uptime_seconds']}\n\n")
     else
