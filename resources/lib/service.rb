@@ -325,6 +325,56 @@ class ServiceListCmd < CmdParse::Command
           end
         end
 
+      elsif systemd_service == 'rb-exporter'
+        instances = `systemctl list-units 'rb-exporter@*.service' --state=running --no-legend 2>/dev/null`
+
+        if !instances.strip.empty? # rb-exporter instances
+
+          instance_lines = instances.lines
+          instance_count = instance_lines.count
+          instance_name = instance_lines.first.split.first
+
+          ret = "running"
+          running += 1
+
+          runtime = `systemctl status #{instance_name} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+          runtime = "#{runtime} (#{instance_count} inst)" if instance_count > 1
+
+          memory_used = `systemctl status #{instance_name} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+          memory_used = '0B' if memory_used.empty?
+
+        else
+          # rb-exporter classic
+          if system("systemctl status rb-exporter &>/dev/null")
+            ret = "running"
+            running += 1
+
+            runtime = `systemctl status rb-exporter | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+            memory_used = `systemctl status rb-exporter | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+            memory_used = '0B' if memory_used.empty?
+          else
+            ret = "not running!!"
+            errors += 1
+            runtime = "N/A"
+            memory_used = "0B"
+          end
+        end
+
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-15s %-10s %-25s\n",
+                "#{systemd_service}:", ret, runtime, memory_used, cgroup)
+        elsif $parser.data[:show_runtime]
+          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-15s %-25s\n",
+                "#{systemd_service}:", ret, runtime, cgroup)
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-10s %-25s\n",
+                "#{systemd_service}:", ret, memory_used, cgroup)
+        else
+          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-25s\n",
+                "#{systemd_service}:", ret, cgroup)
+        end
+
+        next
       elsif system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running += 1
