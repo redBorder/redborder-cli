@@ -208,9 +208,9 @@ class ServiceListCmd < CmdParse::Command
 
     # Paint service list
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("=========================================== Services =====================================================\n")
+      printf("====================================================== Services ===========================================================================\n")
       printf("%-33s %-33s %-23s %-25s %-33s\n", "Service", "Status(#{node_name})", "Runtime", "Cgroup", "Memory")
-      printf("----------------------------------------------------------------------------------------------------------\n")
+      printf("-------------------------------------------------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime]
       printf("================================= Services =========================================\n")
       printf("%-33s %-33s %-10s %-33s\n", "Service", "Status(#{node_name})", "Runtime", "Cgroup")
@@ -422,7 +422,7 @@ class ServiceListCmd < CmdParse::Command
     end
 
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("----------------------------------------------------------------------------------------------------------\n")
+      printf("-------------------------------------------------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("------------------------------------------------------------------------------------\n")
     else
@@ -443,7 +443,7 @@ class ServiceListCmd < CmdParse::Command
     end
 
     if $parser.data[:show_memory] && $parser.data[:show_runtime]
-      printf("%-33s %-10s %49s\n","Total:", services.count, total_memory_formatted)
+      printf("%-33s %-10s %-23s %-25s %s\n","Total:", services.count, "", "", total_memory_formatted)
     elsif $parser.data[:show_memory]
       printf("%-33s %-10s %28s\n","Total:", services.count, total_memory_formatted)
     else
@@ -451,7 +451,7 @@ class ServiceListCmd < CmdParse::Command
     end
 
     if $parser.data[:show_runtime] && $parser.data[:show_memory]
-      printf("----------------------------------------------------------------------------------------------------------\n")
+      printf("-------------------------------------------------------------------------------------------------------------------------------------------\n")
     elsif $parser.data[:show_runtime] || $parser.data[:show_memory]
       printf("------------------------------------------------------------------------------------\n")
     else
