@@ -371,7 +371,13 @@ class ServiceListCmd < CmdParse::Command
 
             if etime =~ /^(\d+)-(\d+):(\d+):/
               days, hours, mins = $1.to_i, $2.to_i, $3.to_i
-              runtimes << "#{days * 24 + hours}h #{mins}min ago"
+              if days > 0
+                runtimes << "#{days} days ago"
+              elsif hours > 0
+                runtimes << "#{hours}h #{mins}min ago"
+              else
+                runtimes << "#{mins}min ago"
+              end
             elsif etime =~ /^(\d+):(\d+):/
               hours, mins = $1.to_i, $2.to_i
               runtimes << "#{hours}h #{mins}min ago"
@@ -424,16 +430,16 @@ class ServiceListCmd < CmdParse::Command
         end
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-15s %-10s %-25s\n",
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-15s %-10s %-25s\n",
                 "#{systemd_service}:", ret, runtime, memory_used, cgroup)
         elsif $parser.data[:show_runtime]
-          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-15s %-25s\n",
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-15s %-25s\n",
                 "#{systemd_service}:", ret, runtime, cgroup)
         elsif $parser.data[:show_memory]
-          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-10s %-25s\n",
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-10s %-25s\n",
                 "#{systemd_service}:", ret, memory_used, cgroup)
         else
-          printf("%-33s #{ret == 'running' ? green : red}%-33s#{reset} %-25s\n",
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-25s\n",
                 "#{systemd_service}:", ret, cgroup)
         end
 
