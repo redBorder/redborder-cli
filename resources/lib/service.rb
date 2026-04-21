@@ -430,14 +430,14 @@ class ServiceListCmd < CmdParse::Command
         end
 
         if $parser.data[:show_runtime] && $parser.data[:show_memory]
-          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-15s %-10s %-25s\n",
-                "#{systemd_service}:", ret, runtime, memory_used, cgroup)
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-23s %-25s %-33s\n",
+                "#{systemd_service}:", ret, runtime, cgroup, memory_used)
         elsif $parser.data[:show_runtime]
-          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-15s %-25s\n",
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-23s %-25s\n",
                 "#{systemd_service}:", ret, runtime, cgroup)
         elsif $parser.data[:show_memory]
-          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-10s %-25s\n",
-                "#{systemd_service}:", ret, memory_used, cgroup)
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-25s %-33s\n",
+                "#{systemd_service}:", ret, cgroup, memory_used)
         else
           printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-25s\n",
                 "#{systemd_service}:", ret, cgroup)
