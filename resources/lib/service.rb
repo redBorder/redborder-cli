@@ -325,6 +325,125 @@ class ServiceListCmd < CmdParse::Command
           end
         end
 
+      elsif systemd_service == 'rb-exporter'
+
+        # rb-exporter instances unit template 
+        if system("systemctl list-unit-files 'rb-exporter@.service' --no-legend 2>/dev/null | grep -q rb-exporter@.service") 
+        
+          instances = `systemctl list-units 'rb-exporter@*.service' --all --no-legend`
+
+          instance_lines = instances.lines
+          # instance_number = instance_lines.count
+          # instance_name = instance_lines.first.split.first
+
+          running_lines = instance_lines.select { |l| l.split[3] == 'running' }
+          running_number = running_lines.count
+
+          config_dir = Dir.glob('/etc/rb-exporter/*')
+            .select { |f| File.directory?(f) }
+            .select { |f| File.exist?(File.join(f, 'rb-exporter.conf')) }
+
+          config_number = config_dir.count
+
+          if config_number == 0
+            ret = "not running"
+            stopped += 1
+
+          elsif config_number == running_number
+            ret = "running"
+            running += 1
+
+          else
+            ret = "not running!!"
+            errors += 1
+          end 
+
+          runtimes = []
+          total_rss_kb = 0
+
+          running_lines.each do |line|
+            instance_name = line.split.first
+
+            pid = `systemctl show -p MainPID --value #{instance_name}`.strip
+            next if pid.empty?
+            
+            etime = `ps -p #{pid} -o etime=`.strip
+
+            if etime =~ /^(\d+)-(\d+):(\d+):/
+              days, hours, mins = $1.to_i, $2.to_i, $3.to_i
+              if days > 0
+                runtimes << "#{days} days ago"
+              elsif hours > 0
+                runtimes << "#{hours}h #{mins}min ago"
+              else
+                runtimes << "#{mins}min ago"
+              end
+            elsif etime =~ /^(\d+):(\d+):/
+              hours, mins = $1.to_i, $2.to_i
+              runtimes << "#{hours}h #{mins}min ago"
+            elsif etime =~ /^(\d+):(\d+)$/
+              mins = $1.to_i
+              runtimes << "#{mins}min ago"
+            elsif etime =~ /^(\d+)$/
+              secs = $1.to_i
+              runtimes << "#{secs}s ago"
+            else
+              runtimes << etime
+            end
+
+            rss_kb = `ps -p #{pid} -o rss=`.to_i
+            total_rss_kb += rss_kb
+          end
+
+          runtime = runtimes.min || "N/A"
+          runtime = "#{runtime} (#{running_number}/#{config_number} inst)"
+
+          memory_used =
+            if total_rss_kb > 0
+              kb = total_rss_kb
+              if kb > 1_048_576
+                "#{(kb / 1024.0 / 1024.0).round(2)}G"
+              elsif kb > 1024
+                "#{(kb / 1024.0).round(2)}M"
+              else
+                "#{kb}K"
+              end
+            else
+              "0B"
+            end
+
+        else
+          # rb-exporter classic
+          if system("systemctl status rb-exporter &>/dev/null")
+            ret = "running"
+            running += 1
+
+            runtime = `systemctl status rb-exporter | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+            memory_used = `systemctl status rb-exporter | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+            memory_used = '0B' if memory_used.empty?
+          else
+            ret = "not running!!"
+            errors += 1
+            runtime = "N/A"
+            memory_used = "0B"
+          end
+        end
+
+        if $parser.data[:show_runtime] && $parser.data[:show_memory]
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-23s %-25s %-33s\n",
+                "#{systemd_service}:", ret, runtime, cgroup, memory_used)
+        elsif $parser.data[:show_runtime]
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-23s %-25s\n",
+                "#{systemd_service}:", ret, runtime, cgroup)
+        elsif $parser.data[:show_memory]
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-25s %-33s\n",
+                "#{systemd_service}:", ret, cgroup, memory_used)
+        else
+          printf("%-33s #{ret == 'running' ? green : (ret == 'not running' ? yellow : red)}%-33s#{reset} %-25s\n",
+                "#{systemd_service}:", ret, cgroup)
+        end
+
+        next
       elsif system("systemctl status #{systemd_service} &>/dev/null")
         ret = "running"
         running += 1
