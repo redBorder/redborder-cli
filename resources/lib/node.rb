@@ -5,6 +5,7 @@ class NodeCmd < CmdParse::Command
     add_command(NodeListCmd.new, default: true)
     add_command(NodeExecuteCmd.new, default: false)
     add_command(NodeCopyCmd.new, default: false)
+    add_command(NodePingCmd.new, default: false)
   end
 end
 
@@ -99,6 +100,37 @@ class NodeCopyCmd < CmdParse::Command
       puts "# #{path}   >   Node: #{n}:#{path}"
       puts "###############################################"
       utils.remote_copy(n, path)
+    end
+  end
+
+end
+
+class NodePingCmd < CmdParse::Command
+
+  def initialize
+    super('ping', takes_commands: false)
+    short_desc('Ping an IP address from a node')
+    options.on('-c', '--count COUNT', Integer, 'Number of ping packets to send') { |c| $parser.data[:ping_count] = c }
+  end
+
+  def execute(node, ip)
+    utils = Utils.instance
+    nodes = utils.check_nodes(node)
+
+    if nodes.count == 0
+      nodes << Socket.gethostname.split('.').first
+    end
+
+    nodes = nodes.sort { |a, b| (a || 'zzzzzz') <=> (b || 'zzzzzz') } if node == 'all'
+
+    count = $parser.data[:ping_count]
+    ping_cmd = count ? "ping -c #{count} #{ip}" : "ping #{ip}"
+
+    nodes.each do |n|
+      puts '##############################################'
+      puts "# Node: #{n}"
+      puts '##############################################'
+      utils.remote_cmd(n, ping_cmd)
     end
   end
 
