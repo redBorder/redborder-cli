@@ -51,3 +51,17 @@ For example:
 rbcli node execute all 'echo\ H3110_w0r1d'
 ```
 Notice the command needs to have special characters escaped, like white spaces, dashes or quotes.
+
+## Update the node to another release
+Looks for the releases available at https://packages.redborder.com/releases, compares them with the installed
+`redborder-repo-<version>` package and lets you choose the version to update to:
+```bash
+rbcli update
+```
+The special `latest` and `testing` repos are offered too. Other options:
+```bash
+rbcli update --list                            # only show the available versions
+rbcli update --release 26.06.21 --yes          # unattended update
+rbcli update --mirror packages-sc.redborder.com  # use a mirror of the packages host
+```
+If the installed repo already points to a mirror, that mirror is used by default.
