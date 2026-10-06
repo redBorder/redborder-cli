@@ -652,8 +652,8 @@ class ServiceEnableCmd < CmdParse::Command
     begin
       nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
       if nodes.count == 0
-        services.insert(0, node)
-        nodes << Socket.gethostname.split(".").first
+        puts "ERROR: Node not found!"
+        return
       end
     rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
       if node == Socket.gethostname.split(".").first
@@ -679,17 +679,22 @@ class ServiceEnableCmd < CmdParse::Command
         role = Chef::Role.load(n)
         role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
 
-        # save info at the node too
-        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+        # The webui stores its toggles in redborder.manager.services.overwrite, which the
+        # cookbook applies last, so keep it in sync or a stale value there would win
+        role.override_attributes["redborder"]["manager"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"]["overwrite"] ||= {}
+        node.normal["redborder"]["manager"]["services"]["overwrite"] = {} if node.normal["redborder"]["manager"]["services"]["overwrite"].nil?
 
         services_with_same_group.each do |s|
           role.override_attributes["redborder"]["services"][s] = true
-          node.override!["redborder"]["services"]["overwrite"][s] = true
+          role.override_attributes["redborder"]["manager"]["services"]["overwrite"][s] = true
+          node.normal["redborder"]["manager"]["services"]["overwrite"][s] = true
           puts "#{s} enabled on #{n}"
         end
         puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
         role.save
+        node.save unless services_with_same_group.empty?
       else
         enabled_services = {}
         systemd_services.each do |service_name, systemd_name|
@@ -740,8 +745,8 @@ class ServiceDisableCmd < CmdParse::Command
     begin
       nodes = utils.check_nodes(node || Socket.gethostname.split(".").first)
       if nodes.count == 0
-        services.insert(0, node)
-        nodes << Socket.gethostname.split(".").first
+        puts "ERROR: Node not found!"
+        return
       end
     rescue Errno::ECONNREFUSED # If the node is ips/proxy, is not reachable
       if node == Socket.gethostname.split(".").first
@@ -789,17 +794,22 @@ class ServiceDisableCmd < CmdParse::Command
         role = Chef::Role.load(n)
         role.override_attributes["redborder"]["services"] = {} unless role.override_attributes["redborder"].include?("services")
 
-        # Save info at the node too
-        node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
-        node.override!["redborder"]["services"]["overwrite"] = {} if node["redborder"]["services"]["overwrite"].nil?
+        # The webui stores its toggles in redborder.manager.services.overwrite, which the
+        # cookbook applies last, so keep it in sync or a stale value there would win
+        role.override_attributes["redborder"]["manager"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"]["overwrite"] ||= {}
+        node.normal["redborder"]["manager"]["services"]["overwrite"] = {} if node.normal["redborder"]["manager"]["services"]["overwrite"].nil?
 
         services_with_same_group.each do |s|
           role.override_attributes["redborder"]["services"][s] = false
-          node.override!["redborder"]["services"]["overwrite"][s] = false
+          role.override_attributes["redborder"]["manager"]["services"]["overwrite"][s] = false
+          node.normal["redborder"]["manager"]["services"]["overwrite"][s] = false
           puts "#{s} disabled on #{n}"
         end
         puts "ERROR: Service not found" if services_with_same_group.nil? || services_with_same_group.empty?
         role.save
+        node.save unless services_with_same_group.empty?
       else
         enabled_services = {}
         systemd_services.each do |service_name, systemd_name|
