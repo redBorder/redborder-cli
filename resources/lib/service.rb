@@ -325,12 +325,12 @@ class ServiceListCmd < CmdParse::Command
           end
         end
 
-      elsif systemd_service == 'rb-exporter'
+      elsif systemd_service == 'rb-exporter' || systemd_service == 'redborder-flow-agent'
 
-        # rb-exporter instances unit template 
-        if system("systemctl list-unit-files 'rb-exporter@.service' --no-legend 2>/dev/null | grep -q rb-exporter@.service") 
+        # rb-exporter / redborder-flow-agent instances unit template (one instance per interface)
+        if system("systemctl list-unit-files '#{systemd_service}@.service' --no-legend 2>/dev/null | grep -q #{systemd_service}@.service") 
         
-          instances = `systemctl list-units 'rb-exporter@*.service' --all --no-legend`
+          instances = `systemctl list-units '#{systemd_service}@*.service' --all --no-legend`
 
           instance_lines = instances.lines
           # instance_number = instance_lines.count
@@ -339,9 +339,16 @@ class ServiceListCmd < CmdParse::Command
           running_lines = instance_lines.select { |l| l.split[3] == 'running' }
           running_number = running_lines.count
 
-          config_dir = Dir.glob('/etc/rb-exporter/*')
-            .select { |f| File.directory?(f) }
-            .select { |f| File.exist?(File.join(f, 'rb-exporter.conf')) }
+          config_dir = if systemd_service == 'redborder-flow-agent'
+            # one <iface>.yaml per enabled interface, written by the rb-flow-agent cookbook
+            Dir.glob('/etc/redborder-flow-agent/*.yaml')
+              .reject { |f| File.basename(f) == 'config.yaml' }
+              .select { |f| File.size?(f) }
+          else
+            Dir.glob('/etc/rb-exporter/*')
+              .select { |f| File.directory?(f) }
+              .select { |f| File.exist?(File.join(f, 'rb-exporter.conf')) }
+          end
 
           config_number = config_dir.count
 
@@ -414,12 +421,12 @@ class ServiceListCmd < CmdParse::Command
 
         else
           # rb-exporter classic
-          if system("systemctl status rb-exporter &>/dev/null")
+          if system("systemctl status #{systemd_service} &>/dev/null")
             ret = "running"
             running += 1
 
-            runtime = `systemctl status rb-exporter | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
-            memory_used = `systemctl status rb-exporter | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
+            runtime = `systemctl status #{systemd_service} | grep 'Active:' | awk '{for(i=9;i<=NF;i++) printf $i " "; print ""}'`.strip
+            memory_used = `systemctl status #{systemd_service} | grep 'Memory:' | sed 's/.*Memory:[[:space:]]*//'`.strip
             memory_used = '0B' if memory_used.empty?
           else
             ret = "not running!!"
