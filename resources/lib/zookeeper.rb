@@ -49,7 +49,7 @@ class ZookeeperCleanCmd < CmdParse::Command
     puts "stopping chef-client in all nodes"
     service_stop_cmd.execute("all","chef-client")
     puts "stopping services in all nodes"
-    service_stop_cmd.execute("all","druid-realtime","druid-indexer","druid-overlord","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka", "f2k", "sfacctd")
+    service_stop_cmd.execute("all","druid-realtime","druid-indexer","druid-overlord","druid-coordinator","druid-historical","druid-broker","redborder-monitor","webui","f2k","n2klocd","freeradius","redborder-social","nmspd","snmpd","logstash","kafka", "f2k", "sfacctd", "http2k")
     puts "stopping zookeeper in all nodes"
     service_stop_cmd.execute("all","zookeeper","zookeeper2")
  
