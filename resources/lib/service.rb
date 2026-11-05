@@ -678,6 +678,10 @@ class ServiceEnableCmd < CmdParse::Command
 
         role = Chef::Role.load(n)
         role.override_attributes["redborder"]["services"] = {} if !role.override_attributes["redborder"].include? "services" # Initialize services in case do not exists
+        # webui's overwrite has the highest precedence in cookbook-rb-manager's manager_services
+        role.override_attributes["redborder"]["manager"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"]["overwrite"] ||= {}
 
         # save info at the node too
         node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
@@ -685,6 +689,7 @@ class ServiceEnableCmd < CmdParse::Command
 
         services_with_same_group.each do |s|
           role.override_attributes["redborder"]["services"][s] = true
+          role.override_attributes["redborder"]["manager"]["services"]["overwrite"][s] = true
           node.override!["redborder"]["services"]["overwrite"][s] = true
           puts "#{s} enabled on #{n}"
         end
@@ -788,6 +793,10 @@ class ServiceDisableCmd < CmdParse::Command
 
         role = Chef::Role.load(n)
         role.override_attributes["redborder"]["services"] = {} unless role.override_attributes["redborder"].include?("services")
+        # webui's overwrite has the highest precedence in cookbook-rb-manager's manager_services
+        role.override_attributes["redborder"]["manager"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"] ||= {}
+        role.override_attributes["redborder"]["manager"]["services"]["overwrite"] ||= {}
 
         # Save info at the node too
         node.override!["redborder"]["services"] = {} if node["redborder"]["services"].nil?
@@ -795,6 +804,7 @@ class ServiceDisableCmd < CmdParse::Command
 
         services_with_same_group.each do |s|
           role.override_attributes["redborder"]["services"][s] = false
+          role.override_attributes["redborder"]["manager"]["services"]["overwrite"][s] = false
           node.override!["redborder"]["services"]["overwrite"][s] = false
           puts "#{s} disabled on #{n}"
         end
