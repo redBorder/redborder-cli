@@ -339,18 +339,15 @@ class ServiceListCmd < CmdParse::Command
           running_lines = instance_lines.select { |l| l.split[3] == 'running' }
           running_number = running_lines.count
 
-          config_dir = if systemd_service == 'redborder-flow-agent'
-            # one <iface>.yaml per enabled interface, written by the rb-flow-agent cookbook
-            Dir.glob('/etc/redborder-flow-agent/*.yaml')
-              .reject { |f| File.basename(f) == 'config.yaml' }
-              .select { |f| File.size?(f) }
+          config_number = if systemd_service == 'redborder-flow-agent'
+            # the rb-flow-agent cookbook enables one instance per interface that should run (enabled = symlink in a .wants dir)
+            Dir.glob("/etc/systemd/system/*.wants/#{systemd_service}@*.service").map { |f| File.basename(f) }.uniq.count
           else
             Dir.glob('/etc/rb-exporter/*')
               .select { |f| File.directory?(f) }
               .select { |f| File.exist?(File.join(f, 'rb-exporter.conf')) }
+              .count
           end
-
-          config_number = config_dir.count
 
           if config_number == 0
             ret = "not running"
