@@ -104,7 +104,7 @@ class ServiceAllCmd < CmdParse::Command
           end
 
         if (external_services.include?(svc) && external_services[svc] == 'external') ||
-           (svc == 'minio' && external_services['s3'] == 'external')
+           (svc.start_with?('seaweedfs-') && external_services['s3'] == 'external')
           st = 'external'
         end
 
@@ -502,7 +502,7 @@ class ServiceListCmd < CmdParse::Command
         end
 
       elsif (external_services.include?(systemd_service) && external_services[systemd_service] == "external") ||
-            (systemd_service == 'minio' && external_services.include?('s3') && external_services['s3'] == 'external')
+            (systemd_service.start_with?('seaweedfs-') && external_services.include?('s3') && external_services['s3'] == 'external')
         ret = "external"
         external += 1
         runtime = "N/A"
