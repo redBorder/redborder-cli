@@ -9,22 +9,21 @@ _rbcli()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Available top-level commands
-    opts="check logstash memcached node rails service setup update zookeeper help version"
+    opts="check memcached node rails service setup update vortex zookeeper help version"
 
     # Sub-commands
     check_opts="status list help"
-    logstash_opts="status pipelines pipeline plugins"
     memcached_opts="status keys values"
     node_opts="list execute copy"
     rails_opts="console"
     service_opts="list enable disable start stop all"
     setup_opts="wizard"
 #    test_opts="sub"
+    vortex_opts="status pipelines pipeline"
     zookeeper_opts="status clean"
 
     # Options for commands and sub-commands
     check_status_opts="-c --colorless -e --extended -q --quiet -s --service -o --output_file -u --upload -k --keep"
-    logstash_pipeline_opts="-p --pipeline" 
     memcached_status_opts="--stats -s --display -d"
     memcached_keys_opts="--invert-match -v"
     memcached_values_opts="--invert-match -v"
@@ -59,15 +58,9 @@ _rbcli()
                 esac
             fi
             ;;
-        logstash)
+        vortex)
             if [ "$COMP_CWORD" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "${logstash_opts}" -- ${cur}) )
-            else
-                case "${COMP_WORDS[2]}" in
-                    pipeline)
-                        COMPREPLY=( $(compgen -W "${logstash_pipeline_opts}" -- ${cur}) )
-                        ;;
-                esac
+                COMPREPLY=( $(compgen -W "${vortex_opts}" -- ${cur}) )
             fi
             ;;
         memcached)
